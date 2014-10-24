@@ -8,8 +8,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
-import static http.Messages.RequestToRead;
-import static http.Messages.ResponseToWrite;
+import static http.Messages.Request;
 
 public class Handlers {
 
@@ -21,7 +20,7 @@ public class Handlers {
         void handleResponseBody(OutputStream outputStream) throws IOException;
     }
 
-    public static ResponseBodyCallback rootHandler(RequestToRead header, ResponseToWrite response, InputStream inputStream) {
+    public static ResponseBodyCallback rootHandler(Request header, Messages.Response response, InputStream inputStream) {
         String[] pathComponents = header.target.split("/");
         if ("/".equals(header.target)) {
             return testHandler(header, response, inputStream);
@@ -32,14 +31,14 @@ public class Handlers {
         }
     }
 
-    private static ResponseBodyCallback notFoundHandler(RequestToRead header, ResponseToWrite response, InputStream inputStream) {
+    private static ResponseBodyCallback notFoundHandler(Request header, Messages.Response response, InputStream inputStream) {
 
         response.status = 404;
 
         return outputStream -> payload(String.format("The resource %s could not be found.", header.target), outputStream);
     }
 
-    private static ResponseBodyCallback testHandler(RequestToRead header, ResponseToWrite response, InputStream inputStream) {
+    private static ResponseBodyCallback testHandler(Request header, Messages.Response response, InputStream inputStream) {
 
         response.status = 200;
         response.headers.put("Server", "Blah-de-blah server.");
@@ -47,7 +46,7 @@ public class Handlers {
         return outputStream -> payload(TEST_HANDLER_MESSAGE, outputStream);
     }
 
-    private static ResponseBodyCallback staticHandler(RequestToRead header, ResponseToWrite response, InputStream inputStream) {
+    private static ResponseBodyCallback staticHandler(Request header, Messages.Response response, InputStream inputStream) {
 
         String target = header.target.substring(header.target.indexOf('/', 1));
         Path path = STATIC_ROOT.resolve(target); // BUG? Can directory traversal happen here?

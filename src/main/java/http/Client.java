@@ -8,20 +8,34 @@ import java.net.Socket;
 import java.net.URL;
 import java.util.Map;
 
+/**
+ * Utilities for making HTTP requests.
+ */
 public class Client {
 
+    /**
+     * Interface for callbacks upon which to call when receiving a server response.
+     * @param <T> The return type of the callback, which may be the result of a conversion of the response body.
+     */
     @FunctionalInterface
     static interface ResponseHandler<T> {
         T handleResponse(Socket socket);
     }
 
+    /**
+     * A trivial HTTP request.
+     *
+     * @param url The URL to be retrieved.
+     * @return The response body.
+     */
     public static String quickGetResponseBody(String url) {
         try {
             return requestHttp11(new URL(url), "GET", null, null, socket -> {
                 InputStream inputStream = null;
                 try {
                     inputStream = socket.getInputStream();
-                    new Messages.ResponseToRead(inputStream); // Throw away the headers and that.
+                    Messages.readResponse(inputStream); // Throw away the headers and that.
+                    new Messages.Response(inputStream);
                     return Utils.inputStream2String(inputStream);
                 } catch (IOException e) {
                     throw new RuntimeException(e);

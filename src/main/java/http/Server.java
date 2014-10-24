@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 
 public class Server {
 
-    static Logger log = Logger.getLogger(Server.class.getName());
+    private static Logger log = Logger.getLogger(Server.class.getName());
 
     @FunctionalInterface
     public static interface TcpServable {
@@ -69,11 +69,10 @@ public class Server {
             try {
                 socket = new ServerSocket(port);
                 lifecycle = Lifecycle.STARTED;
-                log.info("Server started");
+                log.info("Server started on port " + port);
                 while (lifecycle.compareTo(Lifecycle.STOPPING) < 0) {
                     // INEFFICIENT: Accept on multiple threads. Is there an alternative mechanism?
                     Socket nextClient = socket.accept();
-                    log.info("Client connection received. " + socket + ": " + socket.isClosed());
                     clientConnectionExecutor.execute(
                             () -> callback.handleConnection(nextClient)
                     );
@@ -95,8 +94,9 @@ public class Server {
     }
 
     public static void main(String[] args) {
-        Daemon daemon = new Daemon(new TcpServer(8002, client -> Http11.handleHttp11Connection(client)));
+        Daemon daemon = new Daemon(new TcpServer(8000, client -> Http11.handleHttp11Connection(client)));
         Runtime.getRuntime().addShutdownHook(new Thread(shutdownHandler(daemon)));
         daemon.start();
+        log.info("Press Control-C to exit");
     }
 }

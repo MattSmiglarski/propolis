@@ -7,8 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 
-import static http.Messages.RequestToRead;
-import static http.Messages.ResponseToWrite;
+import static http.Messages.Request;
 import static http.Utils.closeQuietly;
 
 public class Http11 {
@@ -17,11 +16,13 @@ public class Http11 {
 
     public static void handleHttp11Connection(Socket client) {
 
-        log.info("Handling connection from " + client + ": " + client.isClosed());
+        log.fine("Handling connection from " + client + ": " + client.isClosed());
 
         try {
-            RequestToRead request = new RequestToRead(client.getInputStream());
-            ResponseToWrite response = new ResponseToWrite();
+            Request request = Messages.readRequest(client.getInputStream());
+            Messages.Response response = new Messages.Response();
+            Messages.writeResponse(client.getOutputStream(), response);
+
             Handlers.ResponseBodyCallback responseBodyCallback;
             if (!validateHeader(request)) {
                 response.status = 400;
@@ -30,12 +31,12 @@ public class Http11 {
                 responseBodyCallback = Handlers.rootHandler(request, response, client.getInputStream());
             }
             OutputStream os = client.getOutputStream();
-            os.write(response.asBytes());
+            Messages.writeResponse(os, response);
 
-            log.info("Response header has been written");
+            log.fine("Response header has been written");
 
             if (responseBodyCallback != null) {
-                log.info("Writing response body.");
+                log.fine("Writing response body.");
                 responseBodyCallback.handleResponseBody(client.getOutputStream());
             }
         } catch (RuntimeException | IOException e) {
@@ -45,7 +46,7 @@ public class Http11 {
         }
     }
 
-    public static boolean validateHeader(RequestToRead header) {
+    public static boolean validateHeader(Request header) {
         List<String> validMethods = Arrays.asList("HEAD", "GET", "POST");
         return validMethods.contains(header.method);
     }

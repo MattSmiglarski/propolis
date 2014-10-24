@@ -7,11 +7,14 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.logging.Logger;
 
-public class Utils {
+/**
+ * Utility methods which do not belong anywhere.
+ */
+public abstract class Utils {
 
-    static Logger log = Logger.getLogger(Server.class.getName());
+    public static Logger log = Logger.getLogger(Utils.class.getName());
 
-    static void closeQuietly(Closeable closeable) {
+    public static void closeQuietly(Closeable closeable) {
         if (closeable != null) try {
             closeable.close();
         } catch (IOException e) {
