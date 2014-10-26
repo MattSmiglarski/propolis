@@ -8,14 +8,14 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class AllTests {
+public class Http11ServerTests {
 
     Server.Daemon daemon;
 
     @Before
     public void setUp() {
-        daemon = new Server.Daemon(new Server.TcpServer(
-                8003, client -> Http11.handleHttp11Connection(client)));
+        daemon = new Server.Daemon(
+                new Server.TcpServer(8003, Http11::handleHttp11Connection));
         daemon.start();
         System.out.println("Server started");
     }

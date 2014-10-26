@@ -55,7 +55,7 @@ public class Server {
         ExecutorService clientConnectionExecutor = Executors.newFixedThreadPool(10);
 
         static enum Lifecycle {
-            STARTING, STARTED, STOPPING, STOPPED;
+            STARTING, STARTED, STOPPING, STOPPED
         }
         volatile Lifecycle lifecycle;
 
@@ -89,13 +89,9 @@ public class Server {
         }
     }
 
-    static Runnable shutdownHandler(Daemon daemon) {
-        return () -> daemon.stop();
-    }
-
     public static void main(String[] args) {
-        Daemon daemon = new Daemon(new TcpServer(8000, client -> Http11.handleHttp11Connection(client)));
-        Runtime.getRuntime().addShutdownHook(new Thread(shutdownHandler(daemon)));
+        Daemon daemon = new Daemon(new TcpServer(8000, Http11::handleHttp11Connection));
+        Runtime.getRuntime().addShutdownHook(new Thread(daemon::stop));
         daemon.start();
         log.info("Press Control-C to exit");
     }

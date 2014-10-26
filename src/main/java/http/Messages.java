@@ -24,6 +24,14 @@ public class Messages {
         statusReason.put(404, "Not Found");
     }
 
+    public static void writeRequest(OutputStream os, Request request) {
+        try {
+            os.write(new RequestBuilder().asBytes(request));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static void writeResponse(OutputStream os, Response response) {
         try {
             os.write(new ResponseBuilder().asBytes(response));
@@ -36,7 +44,7 @@ public class Messages {
         // RFC 7230 Section 3 - Message Format
         Response response = new Response();
         MessageParser messageParser = new MessageParser(inputStream);
-        String[] startLineComponents = messageParser.requestLineComponents();
+        String[] startLineComponents = messageParser.statusLineComponents();
 
         response.version = startLineComponents[0];
         response.status = Integer.parseInt(startLineComponents[1]);
@@ -44,19 +52,6 @@ public class Messages {
         response.headers = messageParser.headers();
 
         return response;
-    }
-
-    static abstract class Message {
-
-        String version = "HTTP/1.1";
-        Map<String, String> headers = new HashMap<>();
-    }
-
-    public static class Request extends Message {
-
-        String method;
-        String target;
-
     }
 
     public static Request readRequest(InputStream inputStream) throws IOException {
@@ -72,10 +67,23 @@ public class Messages {
         return request;
     }
 
+    static abstract class Message {
+
+        public String version = "HTTP/1.1";
+        public Map<String, String> headers = new HashMap<>();
+    }
+
+    public static class Request extends Message {
+
+        public String method;
+        public String target;
+
+    }
+
     public static class Response extends Message {
 
-        int status;
-        String reason;
+        public int status;
+        public String reason;
     }
 
     static class MessageParser {
@@ -91,21 +99,21 @@ public class Messages {
         }
 
         String startLine() throws IOException {
-            Map<String, String> headers = new HashMap<>();
             return reader.readLine();
         }
 
         String[] requestLineComponents() throws IOException {
-            return startLine().split("\\s"); // FIXME: Validation; efficiency.
+            return startLine().split("\\s+"); // FIXME: Validation; efficiency.
         }
 
         String[] statusLineComponents() throws IOException {
-            return startLine().split("\\s");
+            return startLine().split("\\s+");
         }
 
         Map<String, String> headers() throws IOException {
             Map<String, String> headers = new HashMap<>();
             String headerLine;
+
             while ((headerLine = reader.readLine()).trim().length() > 0) {
                 // read until delimiter
                 // read remaining, discarding whitespace
@@ -114,35 +122,9 @@ public class Messages {
                     log.warning("Invalid header! " + headerLine);
                     break;
                 }
-                headers.put(headerLine.substring(0, split), headerLine.substring(split).trim());
+                headers.put(headerLine.substring(0, split), headerLine.substring(split + 1).trim());
             }
             return headers;
-        }
-    }
-
-    public static class RequestBuilder extends MessageBuilder<Request> {
-
-        MessageBuilder<Request> startLine(Request request) {
-            internalBuilder
-                    .append(request.method)
-                    .append(' ')
-                    .append(request.target)
-                    .append(' ')
-                    .append(request.version);
-            return crlf();
-        }
-    }
-
-    public static class ResponseBuilder extends MessageBuilder<Response> {
-
-        MessageBuilder<Response> startLine(Response response) {
-            internalBuilder
-                    .append(response.version)
-                    .append(' ')
-                    .append(String.format("%3d", response.status))
-                    .append(' ')
-                    .append(response.reason);
-            return crlf();
         }
     }
 
@@ -150,10 +132,10 @@ public class Messages {
 
         StringBuilder internalBuilder = new StringBuilder();
 
-        MessageBuilder crlf() {
+        MessageBuilder<M> crlf() {
             internalBuilder
-                .append('\r')
-                .append('\n');
+                    .append('\r')
+                    .append('\n');
             return this;
         }
 
@@ -185,6 +167,32 @@ public class Messages {
 
         byte[] asBytes(M message) {
             return asString(message).getBytes();
+        }
+    }
+
+    public static class RequestBuilder extends MessageBuilder<Request> {
+
+        MessageBuilder<Request> startLine(Request request) {
+            internalBuilder
+                    .append(request.method)
+                    .append(' ')
+                    .append(request.target)
+                    .append(' ')
+                    .append(request.version);
+            return crlf();
+        }
+    }
+
+    public static class ResponseBuilder extends MessageBuilder<Response> {
+
+        MessageBuilder<Response> startLine(Response response) {
+            internalBuilder
+                    .append(response.version)
+                    .append(' ')
+                    .append(response.status)
+                    .append(' ')
+                    .append(response.reason != null ? response.reason : statusReason.get(response.status));
+            return crlf();
         }
     }
 }

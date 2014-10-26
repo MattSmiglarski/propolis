@@ -12,7 +12,7 @@ import java.util.logging.Logger;
  */
 public abstract class Utils {
 
-    public static Logger log = Logger.getLogger(Utils.class.getName());
+    private static final Logger log = Logger.getLogger(Utils.class.getName());
 
     public static void closeQuietly(Closeable closeable) {
         if (closeable != null) try {
@@ -23,14 +23,14 @@ public abstract class Utils {
     }
 
     public static String inputStream2String(InputStream inputStream) {
-        StringBuffer buffer = new StringBuffer();
+        StringBuilder builder = new StringBuilder();
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
             String nextLine;
             while ((nextLine = reader.readLine()) != null) {
-                buffer.append(nextLine);
+                builder.append(nextLine);
             }
-            return buffer.toString();
+            return builder.toString();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

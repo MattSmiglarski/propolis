@@ -1,7 +1,6 @@
 package http;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.List;
@@ -30,8 +29,6 @@ public class Http11 {
             } else {
                 responseBodyCallback = Handlers.rootHandler(request, response, client.getInputStream());
             }
-            OutputStream os = client.getOutputStream();
-            Messages.writeResponse(os, response);
 
             log.fine("Response header has been written");
 
