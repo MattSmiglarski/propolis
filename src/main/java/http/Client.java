@@ -1,18 +1,25 @@
 package http;
 
+import http.http2.Frames;
+import http.http2.Http2;
+import http.http2.PingApplication;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
+import java.util.logging.Logger;
 
 /**
  * Utilities for making HTTP requests.
  */
 public class Client {
 
+    private final static Logger log = Logger.getLogger(Client.class.getName());
     /**
      * Interface for callbacks upon which to call when receiving a server response.
      * @param <T> The return type of the callback, which may be the result of a conversion of the response body.
@@ -38,6 +45,45 @@ public class Client {
             });
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public static void requestHttp2(String url) throws IOException, URISyntaxException {
+        URI uri = new URI(url);
+
+        int port = uri.getPort() >= 0 ? uri.getPort() : 80;
+        String path = uri.getPath().length() > 0 ? uri.getPath() : "/";
+
+        Messages.Request requestMessage = new Messages.Request();
+        requestMessage.method = "GET";
+        requestMessage.target = path;
+
+        Socket socket = null;
+        try {
+            socket = new Socket(uri.getHost(), port);
+            Messages.writeRequest(socket.getOutputStream(), requestMessage);
+
+            InputStream is = socket.getInputStream();
+            OutputStream os = socket.getOutputStream();
+            Messages.Response response = Messages.readResponse(is);
+            log.info("Received response " + response);
+            os.write(Http2.PREFACE);
+            Frames.SettingsFrame settings = new Frames.SettingsFrame();
+
+            PingApplication application = new PingApplication();
+            application.sendFrame(settings);
+            Frames.Frame.read(is, application);
+            // read settings?
+
+            application.sendFrame(new Frames.PingFrame());
+            Frames.Frame.read(is, application);
+            socket.close();
+        } catch (ConnectException e) {
+            throw new RuntimeException(e.getMessage());
+        } catch (IOException e) {
+            throw new RuntimeException("Failure!", e);
+        } finally {
+            Utils.closeQuietly(socket);
         }
     }
 

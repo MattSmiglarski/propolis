@@ -8,9 +8,13 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Logger;
 
 public abstract class Frames {
 
+    private static final Logger log = Logger.getLogger(Frames.class.getName());
     private static final int HEADER_SIZE = 9 * 8;
 
     enum Error {
@@ -192,6 +196,7 @@ public abstract class Frames {
                 writePayload(buffer);
                 buffer.flip();
                 int payloadLength = buffer.limit() - HEADER_SIZE;
+                log.info(String.format("Writing frame with length: %X", payloadLength));
                 if (payloadLength > maxLength) {
                     throw new RuntimeException("Length exceeds maximum length. Has a SETTINGS_MAX_FRAME_SIZE setting been sent and not parsed?");
                 }
@@ -214,18 +219,80 @@ public abstract class Frames {
             }
         }
 
+        public static Frame readSync(InputStream is) throws IOException {
+            CompletableFuture<Frame> receivedFrame = new CompletableFuture<>();
+            try {
+                FrameReceiver receiver = new FrameReceiver() {
+                    @Override
+                    public void onFrame(DataFrame frame) {
+                        receivedFrame.complete(frame);
+                    }
+
+                    @Override
+                    public void onFrame(HeadersFrame frame) {
+                        receivedFrame.complete(frame);
+                    }
+
+                    @Override
+                    public void onFrame(PriorityFrame frame) {
+                        receivedFrame.complete(frame);
+                    }
+
+                    @Override
+                    public void onFrame(ResetFrame frame) {
+                        receivedFrame.complete(frame);
+                    }
+
+                    @Override
+                    public void onFrame(SettingsFrame frame) {
+                        receivedFrame.complete(frame);
+                    }
+
+                    @Override
+                    public void onFrame(PushPromiseFrame frame) {
+                        receivedFrame.complete(frame);
+                    }
+
+                    @Override
+                    public void onFrame(PingFrame frame) {
+                        receivedFrame.complete(frame);
+                    }
+
+                    @Override
+                    public void onFrame(GoAwayFrame frame) {
+                        receivedFrame.complete(frame);
+                    }
+
+                    @Override
+                    public void onFrame(WindowUpdateFrame frame) {
+                        receivedFrame.complete(frame);
+                    }
+
+                    @Override
+                    public void onFrame(ContinuationFrame frame) {
+                        receivedFrame.complete(frame);
+                    }
+                };
+                read(is, receiver);
+                return receivedFrame.get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         public static void read(InputStream is, FrameReceiver receiver) throws IOException {
             byte[] header = new byte[HEADER_SIZE];
             is.read(header);
             ByteBuffer buffer = ByteBuffer.wrap(header).order(ByteOrder.BIG_ENDIAN);
-            int length = buffer.getInt();
+            final int length = buffer.getInt();
+            log.info(String.format("Received frame with length: %d %X", length, length));
             byte[] typeReservedAndFlags = new byte[5];
             buffer.get(typeReservedAndFlags);
             int streamId = buffer.getInt();
             byte[] payload = new byte[length];
             int bytesRead = is.read(payload);
             if (bytesRead != length) {
-                throw new RuntimeException(String.format("Failed to consume the entire payload! Expected %X, actual %X.", length, bytesRead));
+                throw new RuntimeException(String.format("Failed to consume the entire payload! Expected %d %X, actual %d %X.", length, length, bytesRead, bytesRead));
             }
 
             int type = typeReservedAndFlags[0] << 16

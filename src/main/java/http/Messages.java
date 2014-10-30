@@ -22,6 +22,7 @@ public class Messages {
         statusReason.put(200, "OK");
         statusReason.put(400, "Bad readRequest");
         statusReason.put(404, "Not Found");
+        statusReason.put(421, "Misdirected Request");
     }
 
     public static void writeRequest(OutputStream os, Request request) {

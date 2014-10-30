@@ -14,9 +14,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
 
 public class PingTests {
 
@@ -29,52 +26,21 @@ public class PingTests {
         }));
         daemon.start();
 
-        final Map<String, Long> pingRequests = new HashMap<>();
-        final Map<String, Long> pingResponses = new HashMap<>();
         URI uri = new URI("h2c-14://localhost:8003/");
         Long responseTime = Client.requestHttp11(uri, "GET", null, null, socket -> {
             InputStream is = socket.getInputStream();
             OutputStream os = socket.getOutputStream();
-            Messages.Response response = Messages.readResponse(is);
+            Messages.readResponse(is);
             os.write(Http2.PREFACE);
-            Frames.SettingsFrame settings = new Frames.SettingsFrame();
-
-            PingApplication application = new PingApplication() {
-                @Override
-                public void onFrame(Frames.PingFrame frame) {
-                    super.onFrame(frame);
-                    ByteBuffer buffer = ByteBuffer.wrap(frame.data).asReadOnlyBuffer();
-                    StringBuilder stringBuilder = new StringBuilder();
-                    while (buffer.position() < buffer.limit()) {
-                        stringBuilder.append(buffer.getChar());
-                    }
-                    String pingString = stringBuilder.toString();
-                    if (pingResponses.get(pingString) != null) {
-                        throw new RuntimeException("There is already a response time set for " + pingString);
-                    }
-                    pingResponses.put(pingString, System.currentTimeMillis());
-                }
-
-                @Override
-                public void onFrame(Frames.SettingsFrame frame) {
-                    System.out.println("Received settings, ignoring...");
-                }
-            };
-
-            application.sendFrame(settings);
-            Frames.Frame.read(is, application);
-            // read settings?
-            Frames.PingFrame pingFrame = new Frames.PingFrame();
-
+            new Frames.SettingsFrame().write(os);
+            Frames.SettingsFrame settingsFrame = (Frames.SettingsFrame) Frames.Frame.readSync(is);
+            System.out.println("Received: " + settingsFrame);
+            Frames.PingFrame ping = new Frames.PingFrame();
             long requestTime = System.currentTimeMillis();
-            pingRequests.put("", requestTime);
-            application.sendFrame(pingFrame);
-            Frames.Frame.read(is, application);
-            socket.close();
-            Map.Entry<String, Long> entry = pingRequests.entrySet().iterator().next();
-            Map.Entry<String, Long> responseEntry = pingResponses.entrySet().iterator().next();
-
-            return responseEntry.getValue() - entry.getValue();
+            ping.write(os);
+            Frames.PingFrame pong = (Frames.PingFrame) Frames.Frame.readSync(is);
+            System.out.println("Received: " + pong);
+            return System.currentTimeMillis() - requestTime;
         });
 
         daemon.stop();

@@ -9,8 +9,6 @@ import org.junit.Test;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -85,30 +83,5 @@ public class OtherTests {
         Assert.assertTrue(receivedFrames.size() == 1);
         Frames.PingFrame receivedFrame = receivedFrames.get(0);
         Assert.assertEquals(frame.data.length, receivedFrame.data.length);
-    }
-
-    @Test
-    public void howDoesItWork() {
-        for (int type = 0; type < (2 << 15) - 1; type++) {
-            byte[] a24BitInt = new byte[3];
-            a24BitInt[0] = (byte) ((0xFF0000 & type) >> 16);
-            a24BitInt[1] = (byte) ((0x00FF00 & type) >> 8);
-            a24BitInt[2] = (byte) (0x0000FF & type);
-
-            int decoded = (0xFF0000 & (a24BitInt[0] << 16))
-                    | (0x00FF00 & (a24BitInt[1] << 8))
-                    | (0x0000FF & (a24BitInt[2]));
-
-            Assert.assertEquals(type, decoded);
-        }
-    }
-
-    public static void main(String[] args) throws IOException {
-        byte[] output = new byte[4];
-        byte[] input = {(byte) (2)};
-        new ByteArrayInputStream(input).read(output);
-        ByteBuffer wrap = ByteBuffer.wrap(output).order(ByteOrder.LITTLE_ENDIAN);
-
-        System.out.println(String.format("%X", wrap.getInt()));
     }
 }
