@@ -3,6 +3,8 @@ package http;
 import http.http2.Frames;
 import http.http2.Http2;
 import http.http2.PingApplication;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,14 +14,13 @@ import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
-import java.util.logging.Logger;
 
 /**
  * Utilities for making HTTP requests.
  */
 public class Client {
 
-    private final static Logger log = Logger.getLogger(Client.class.getName());
+    private final static Logger log = LoggerFactory.getLogger(Client.class);
     /**
      * Interface for callbacks upon which to call when receiving a server response.
      * @param <T> The return type of the callback, which may be the result of a conversion of the response body.

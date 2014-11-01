@@ -1,7 +1,8 @@
 package http.http2;
 
 import java.util.concurrent.LinkedBlockingDeque;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public interface Application extends FrameReceiver {
 
@@ -20,7 +21,7 @@ public interface Application extends FrameReceiver {
 
     public static class Adapter implements Application {
 
-        protected Logger log = Logger.getLogger(Application.class.getName());
+        protected Logger log = LoggerFactory.getLogger(Application.class.getName());
         protected volatile LinkedBlockingDeque<Frames.Frame> sendFrames = new LinkedBlockingDeque<>();
 
         public Frames.Frame nextFrame() throws InterruptedException {

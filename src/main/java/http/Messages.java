@@ -7,14 +7,15 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Mechanisms for the reading and writing of requests and responses.
  */
 public class Messages {
 
-    private static Logger log = Logger.getLogger(Messages.class.getName());
+    private static Logger log = LoggerFactory.getLogger(Messages.class.getName());
     private static final Map<Integer, String> statusReason = new HashMap<>();
 
     static {
@@ -120,7 +121,7 @@ public class Messages {
                 // read remaining, discarding whitespace
                 int split = headerLine.indexOf(':');
                 if (split == -1) {
-                    log.warning("Invalid header! " + headerLine);
+                    log.warn("Invalid header! " + headerLine);
                     break;
                 }
                 headers.put(headerLine.substring(0, split), headerLine.substring(split + 1).trim());

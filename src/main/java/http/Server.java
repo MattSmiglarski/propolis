@@ -6,11 +6,12 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Server {
 
-    private static Logger log = Logger.getLogger(Server.class.getName());
+    private static Logger log = LoggerFactory.getLogger(Server.class.getName());
 
     @FunctionalInterface
     public static interface TcpServable {
@@ -35,7 +36,7 @@ public class Server {
                 try {
                     Thread.sleep(20); // Pause time.
                 } catch (InterruptedException e) {
-                    log.severe("Thread interrupted!");
+                    log.error("Thread interrupted!");
                     Thread.currentThread().interrupt();
                 }
             } while (server.lifecycle.compareTo(TcpServer.Lifecycle.STARTED) < 0);

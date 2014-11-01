@@ -8,18 +8,19 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static http.Utils.closeQuietly;
 
 public class Http2 {
 
-    private final static Logger log = Logger.getLogger(Http2.class.getName());
+    private final static Logger log = LoggerFactory.getLogger(Http2.class);
     public static final byte[] PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes();
 
     public static void handleHttp2Connection(Socket client, Application application) {
 
-        log.fine("Handling connection from " + client + ": " + client.isClosed());
+        log.debug("Handling connection from " + client + ": " + client.isClosed());
 
         try {
             InputStream is = client.getInputStream();

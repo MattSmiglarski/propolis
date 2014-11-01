@@ -1,5 +1,8 @@
 package http.http2;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -10,11 +13,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.logging.Logger;
 
 public abstract class Frames {
 
-    private static final Logger log = Logger.getLogger(Frames.class.getName());
+    private static final Logger log = LoggerFactory.getLogger(Frames.class);
     private static final int HEADER_SIZE = 9 * 8;
 
     enum Error {

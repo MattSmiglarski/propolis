@@ -5,20 +5,21 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility methods which do not belong anywhere.
  */
 public abstract class Utils {
 
-    private static final Logger log = Logger.getLogger(Utils.class.getName());
+    private static final Logger log = LoggerFactory.getLogger(Utils.class.getName());
 
     public static void closeQuietly(Closeable closeable) {
         if (closeable != null) try {
             closeable.close();
         } catch (IOException e) {
-            log.severe("Failed to close stream! " + e.getMessage());
+            log.error("Failed to close stream! " + e.getMessage());
         }
     }
 

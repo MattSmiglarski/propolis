@@ -4,18 +4,19 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.List;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static http.Messages.Request;
 import static http.Utils.closeQuietly;
 
 public class Http11 {
 
-    private static Logger log = Logger.getLogger(Http11.class.getName());
+    private static Logger log = LoggerFactory.getLogger(Http11.class.getName());
 
     public static void handleHttp11Connection(Socket client) {
 
-        log.fine("Handling connection from " + client + ": " + client.isClosed());
+        log.debug("Handling connection from " + client + ": " + client.isClosed());
 
         try {
             Request request = Messages.readRequest(client.getInputStream());
@@ -30,10 +31,10 @@ public class Http11 {
                 responseBodyCallback = Handlers.rootHandler(request, response, client.getInputStream());
             }
 
-            log.fine("Response header has been written");
+            log.debug("Response header has been written");
 
             if (responseBodyCallback != null) {
-                log.fine("Writing response body.");
+                log.debug("Writing response body.");
                 responseBodyCallback.handleResponseBody(client.getOutputStream());
             }
         } catch (RuntimeException | IOException e) {
