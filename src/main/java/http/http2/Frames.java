@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -17,7 +18,8 @@ import java.util.concurrent.ExecutionException;
 public abstract class Frames {
 
     private static final Logger log = LoggerFactory.getLogger(Frames.class);
-    private static final int HEADER_SIZE = 9 * 8;
+    public static final int HEADER_SIZE = 9 * 8;
+    public static final int SETTINGS_MAX_FRAME_LENGTH = 16384;
 
     enum Error {
         NO_ERROR, PROTOCOL_ERROR, INTERNAL_ERROR, FLOW_CONTROL_ERROR, SETTINGS_TIMEOUT,
@@ -80,7 +82,7 @@ public abstract class Frames {
 
     public static class SettingsFrame extends Frame {
 
-        boolean ack;
+        public boolean ack;
         Map<Integer, Integer> settings = new HashMap<>();
 
         public SettingsFrame() {
@@ -125,11 +127,28 @@ public abstract class Frames {
         public boolean ack;
 
         public PingFrame() {
+            this(new byte[]{
+                    (byte) (0xDEADBEEF >>> 24),
+                    (byte) (0xDEADBEEF >>> 16),
+                    (byte) (0xDEADBEEF >>> 8),
+                    (byte) 0xDEADBEEF,
+                    (byte) (0xDEADBEEF >>> 24),
+                    (byte) (0xDEADBEEF >>> 16),
+                    (byte) (0xDEADBEEF >>> 8),
+                    (byte) 0xDEADBEEF
+            });
+        }
+
+        public PingFrame(byte[] data) {
             super(Type.PING);
+            this.data = data;
         }
 
         @Override
         protected void writePayload(ByteBuffer buffer) {
+            if (data.length != 8) {
+                throw new RuntimeException("Ping payload must be length 8, not " + data.length);
+            }
             buffer.put(data);
         }
 
@@ -287,21 +306,35 @@ public abstract class Frames {
             is.read(header);
             ByteBuffer buffer = ByteBuffer.wrap(header).order(ByteOrder.BIG_ENDIAN);
             final int length = buffer.getInt();
-            log.info(String.format("Received frame with length: %d %X", length, length));
+
             byte[] typeReservedAndFlags = new byte[5];
             buffer.get(typeReservedAndFlags);
             int streamId = buffer.getInt();
-            byte[] payload = new byte[length];
-            int bytesRead = is.read(payload);
-            if (bytesRead != length) {
-                throw new RuntimeException(String.format("Failed to consume the entire payload! Expected %d %X, actual %d %X.", length, length, bytesRead, bytesRead));
-            }
 
             int type = typeReservedAndFlags[0] << 16
                     | typeReservedAndFlags[1] << 8
                     | typeReservedAndFlags[2];
 
             int flags = typeReservedAndFlags[4];
+
+            log.info(String.format("Received frame with length: %d, type: %s, flags: %d", length, Type.values()[type], flags));
+
+            if (length > SETTINGS_MAX_FRAME_LENGTH) {
+                throw new RuntimeException(String.format("Payload of size %d exceeded the maximum length of %d.", length, SETTINGS_MAX_FRAME_LENGTH));
+            }
+
+            // Should we delay reading the payload?
+            byte[] payload = new byte[length];
+            if (length > 0) {
+                int bytesRead = is.read(payload);
+                if (bytesRead < 0) {
+                    throw new RuntimeException("Failed to read anything from the input stream!");
+                } else if (bytesRead != length) {
+                    throw new RuntimeException(String.format("Failed to consume the entire payload! Expected %d, actual %d.", length, bytesRead));
+                }
+            } else {
+                log.info("Empty payload. Continuing...");
+            }
 
             switch (types[type]) {
                 case SETTINGS: {

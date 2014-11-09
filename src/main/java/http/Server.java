@@ -25,7 +25,7 @@ public class Server {
 
         public Daemon(TcpServer server) {
             this.server = server;
-            this.thread = new Thread(server);
+            this.thread = new Thread(null, server, "Server");
         }
 
         public void start() {
@@ -50,7 +50,7 @@ public class Server {
 
     public static class TcpServer implements Runnable {
 
-        int port;
+        public int port;
         TcpServable callback;
         ServerSocket socket;
         ExecutorService clientConnectionExecutor = Executors.newFixedThreadPool(10);
@@ -70,6 +70,7 @@ public class Server {
             try {
                 socket = new ServerSocket(port);
                 lifecycle = Lifecycle.STARTED;
+                this.port = socket.getLocalPort();
                 log.info("Server started on port " + port);
                 while (lifecycle.compareTo(Lifecycle.STOPPING) < 0) {
                     // INEFFICIENT: Accept on multiple threads. Is there an alternative mechanism?

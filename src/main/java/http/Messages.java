@@ -124,6 +124,7 @@ public class Messages {
                     log.warn("Invalid header! " + headerLine);
                     break;
                 }
+                log.debug("Header: " + headerLine);
                 headers.put(headerLine.substring(0, split), headerLine.substring(split + 1).trim());
             }
             return headers;
@@ -167,7 +168,7 @@ public class Messages {
             return asStringBuilder(message).toString();
         }
 
-        byte[] asBytes(M message) {
+        public byte[] asBytes(M message) {
             return asString(message).getBytes();
         }
     }

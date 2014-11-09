@@ -105,6 +105,7 @@ public class Client {
             socket = new Socket(url.getHost(), port);
             Messages.writeRequest(socket.getOutputStream(), requestMessage);
 
+            Thread.currentThread().setName("Client");
             return responseHandler.handleResponse(socket);
         } catch (ConnectException e) {
             throw new RuntimeException(e.getMessage());

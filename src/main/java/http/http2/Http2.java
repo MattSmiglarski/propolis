@@ -32,17 +32,21 @@ public class Http2 {
             Messages.writeResponse(client.getOutputStream(), response);
 
             // Write preface
-            os.write(PREFACE);
             Frames.SettingsFrame settingsFrame = new Frames.SettingsFrame();
             settingsFrame.write(os);
 
             // Read preface
             BufferedReader lineReader = new BufferedReader(new InputStreamReader(is));
-            log.info(lineReader.readLine());
-            log.info(lineReader.readLine());
-            log.info(lineReader.readLine());
-            log.info(lineReader.readLine());
-            log.info(lineReader.readLine());
+            for (int i = 0; i < Http2.PREFACE.length; i++) {
+                if (Http2.PREFACE[i] == ((byte) '\n')) {
+                    String prefaceLine = lineReader.readLine();
+                    if (prefaceLine == null) {
+                        throw new RuntimeException("Null preface line. Connection closed?");
+                    }
+                    log.info("PREFACE: " + prefaceLine);
+                }
+            }
+
             Frames.Frame.read(is, new Application.Adapter() {
                 public void onFrame(Frames.SettingsFrame frame) {
                     log.info("Received settings");

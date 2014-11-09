@@ -4,17 +4,6 @@ import java.nio.ByteBuffer;
 
 public class PingApplication extends Application.Adapter {
 
-    public PingApplication() {
-        Frames.PingFrame ping = new Frames.PingFrame();
-        ping.streamId = 0x0;
-        ping.ack = false;
-        ByteBuffer byteBuffer = ByteBuffer.allocate(8);
-        byteBuffer.putInt(0xDEADBEEF);
-        byteBuffer.putInt(0xDEADBEEF);
-        ping.data = byteBuffer.array();
-        sendFrames.add(ping);
-    }
-
     public void onFrame(Frames.PingFrame ping) {
         if (ping.streamId != 0) {
             connectionError(Frames.Error.PROTOCOL_ERROR);

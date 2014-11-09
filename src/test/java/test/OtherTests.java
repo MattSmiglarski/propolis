@@ -55,20 +55,13 @@ public class OtherTests {
         byte[] frameData = baos.toByteArray();
         ByteArrayInputStream bais = new ByteArrayInputStream(frameData);
         List<Frames.SettingsFrame> receivedFrames = new ArrayList<>();
-        Frames.Frame.read(bais, new Application.Adapter() {
-            @Override
-            public void onFrame(Frames.SettingsFrame frame) {
-                receivedFrames.add(frame);
-            }
-        });
-        Assert.assertTrue(receivedFrames.size() == 1);
-        Frames.SettingsFrame receivedFrame = receivedFrames.get(0);
+        Frames.SettingsFrame receivedFrame = (Frames.SettingsFrame) Frames.Frame.readSync(bais);
     }
 
     @Test
     public void shouldDetermineTheFrameLength() throws IOException {
         Frames.PingFrame frame = new Frames.PingFrame();
-        frame.data = "1234567".getBytes();
+        frame.data = "12345678".getBytes();
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         frame.write(baos);
         byte[] frameData = baos.toByteArray();
