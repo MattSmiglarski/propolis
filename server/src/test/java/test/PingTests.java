@@ -33,11 +33,6 @@ public class PingTests {
 
     private static final Logger log = LoggerFactory.getLogger(PingTests.class);
 
-    @Before
-    public void initLogging() {
-        log.debug("Logging initialised.");
-    }
-
     @Test(timeout = 10000)
     public void pingShouldWork() throws IOException, URISyntaxException {
         Server.TcpServer server = new Server.TcpServer(
@@ -78,7 +73,7 @@ public class PingTests {
         log.info("Response time: " + responseTime);
     }
 
-    @Test
+    @Test(timeout = 5000)
     public void assertionsShouldWorkTogether() throws Throwable {
         final ServerSocket server = new ServerSocket(0);
         assertClientIsPingCompliant(
