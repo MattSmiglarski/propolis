@@ -1,14 +1,16 @@
-package http;
+package propolis.server;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import propolis.shared.Messages;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import static http.Messages.Request;
-import static http.Utils.closeQuietly;
+import static propolis.shared.Messages.Request;
+import static propolis.shared.Utils.closeQuietly;
 
 public class Http11 {
 

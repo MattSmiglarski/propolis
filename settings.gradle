@@ -1,3 +1,7 @@
 rootProject.name = 'propolis'
 
+include 'shared'
 include 'server'
+include 'applications'
+include 'client'
+include 'test'

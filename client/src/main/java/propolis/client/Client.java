@@ -1,10 +1,11 @@
-package http;
+package propolis.client;
 
-import http.http2.Frames;
-import http.http2.Http2;
-import http.http2.PingApplication;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import propolis.shared.Application;
+import propolis.shared.Frames;
+import propolis.shared.Messages;
+import propolis.shared.Utils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,6 +22,7 @@ import java.util.Map;
 public class Client {
 
     private final static Logger log = LoggerFactory.getLogger(Client.class);
+    public static final byte[] PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes();
     /**
      * Interface for callbacks upon which to call when receiving a server response.
      * @param <T> The return type of the callback, which may be the result of a conversion of the response body.
@@ -49,7 +51,7 @@ public class Client {
         }
     }
 
-    public static void requestHttp2(String url) throws IOException, URISyntaxException {
+    public static void requestHttp2(String url, Application application) throws IOException, URISyntaxException {
         URI uri = new URI(url);
 
         int port = uri.getPort() >= 0 ? uri.getPort() : 80;
@@ -68,10 +70,9 @@ public class Client {
             OutputStream os = socket.getOutputStream();
             Messages.Response response = Messages.readResponse(is);
             log.info("Received response " + response);
-            os.write(Http2.PREFACE);
+            os.write(PREFACE);
             Frames.SettingsFrame settings = new Frames.SettingsFrame();
 
-            PingApplication application = new PingApplication();
             application.sendFrame(settings);
             Frames.Frame.read(is, application);
             // read settings?

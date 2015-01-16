@@ -1,18 +1,21 @@
-package test;
+package test.server.applications;
 
-import http.Client;
-import http.Messages;
-import http.Server;
-import http.http2.Frames;
-import http.http2.Http2;
-import http.http2.PingApplication;
+import propolis.server.Server;
+import propolis.server.http2.Http2;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import propolis.applications.PingApplication;
+import propolis.client.Client;
+import propolis.shared.Application;
+import propolis.shared.Frames;
+import propolis.shared.Messages;
+import test.Assertions;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -21,8 +24,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -181,5 +184,25 @@ public class PingTests {
         } catch (IOException | InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Test
+    public void shouldDetermineTheFrameLength() throws IOException {
+        Frames.PingFrame frame = new Frames.PingFrame();
+        frame.data = "12345678".getBytes();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        frame.write(baos);
+        byte[] frameData = baos.toByteArray();
+        ByteArrayInputStream bais = new ByteArrayInputStream(frameData);
+        List<Frames.PingFrame> receivedFrames = new ArrayList<>();
+        Frames.Frame.read(bais, new Application.Adapter() {
+            @Override
+            public void onFrame(Frames.PingFrame frame) {
+                receivedFrames.add(frame);
+            }
+        });
+        Assert.assertTrue(receivedFrames.size() == 1);
+        Frames.PingFrame receivedFrame = receivedFrames.get(0);
+        Assert.assertEquals(frame.data.length, receivedFrame.data.length);
     }
 }

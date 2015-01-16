@@ -1,4 +1,4 @@
-package http.http2;
+package propolis.shared;
 
 public interface FrameReceiver {
     void onFrame(Frames.DataFrame frame);

@@ -1,6 +1,7 @@
-package http.http2;
+package propolis.applications;
 
-import java.nio.ByteBuffer;
+import propolis.shared.Application;
+import propolis.shared.Frames;
 
 public class PingApplication extends Application.Adapter {
 

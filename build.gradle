@@ -1,5 +1,55 @@
-Closure cl = { task -> println "I'm $task.project.name" }
-task hello << cl
+subprojects {
+
+    apply plugin: 'java'
+    group = 'propolis'
+    version= '0.1'
+    sourceCompatibility = 1.8
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.+'
+        compile group: 'ch.qos.logback', name: 'logback-classic', version: '1+'
+
+        testCompile project(':test')
+    }
+}
+
+project(':applications') {
+
+    dependencies {
+        compile project(':client')
+        compile project(':server')
+    }
+}
+
 project(':server') {
-    task hello << cl
+
+    apply plugin: 'application'
+
+    mainClassName = 'http.Server'
+
+    dependencies {
+        compile project(':shared')
+    }
+}
+
+project(':client') {
+
+    dependencies {
+        compile project(':shared')
+    }
+}
+
+project(':test') {
+
+    dependencies {
+
+        compile group: 'junit', name: 'junit', version: '4.11'
+        compile project(':client')
+        compile project(':server')
+        compile project(':applications')
+    }
 }

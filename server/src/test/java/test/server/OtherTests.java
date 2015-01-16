@@ -1,10 +1,9 @@
-package test;
+package test.server;
 
-import http.Messages;
-import http.http2.Application;
-import http.http2.Frames;
 import org.junit.Assert;
 import org.junit.Test;
+import propolis.shared.Frames;
+import propolis.shared.Messages;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -56,25 +55,5 @@ public class OtherTests {
         ByteArrayInputStream bais = new ByteArrayInputStream(frameData);
         List<Frames.SettingsFrame> receivedFrames = new ArrayList<>();
         Frames.SettingsFrame receivedFrame = (Frames.SettingsFrame) Frames.Frame.readSync(bais);
-    }
-
-    @Test
-    public void shouldDetermineTheFrameLength() throws IOException {
-        Frames.PingFrame frame = new Frames.PingFrame();
-        frame.data = "12345678".getBytes();
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        frame.write(baos);
-        byte[] frameData = baos.toByteArray();
-        ByteArrayInputStream bais = new ByteArrayInputStream(frameData);
-        List<Frames.PingFrame> receivedFrames = new ArrayList<>();
-        Frames.Frame.read(bais, new Application.Adapter() {
-            @Override
-            public void onFrame(Frames.PingFrame frame) {
-                receivedFrames.add(frame);
-            }
-        });
-        Assert.assertTrue(receivedFrames.size() == 1);
-        Frames.PingFrame receivedFrame = receivedFrames.get(0);
-        Assert.assertEquals(frame.data.length, receivedFrame.data.length);
     }
 }

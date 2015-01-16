@@ -1,6 +1,10 @@
-package http.http2;
+package propolis.server.http2;
 
-import http.Messages;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import propolis.shared.Application;
+import propolis.shared.Frames;
+import propolis.shared.Messages;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -8,10 +12,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import static http.Utils.closeQuietly;
+import static propolis.shared.Utils.closeQuietly;
 
 public class Http2 {
 

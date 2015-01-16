@@ -1,7 +1,7 @@
 package test;
 
-import http.http2.Frames;
 import org.junit.Assert;
+import propolis.shared.Frames;
 
 import java.io.IOException;
 import java.io.InputStream;

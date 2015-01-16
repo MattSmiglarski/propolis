@@ -1,4 +1,8 @@
-package http;
+package propolis.server;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import propolis.shared.Utils;
 
 import java.io.IOException;
 import java.net.BindException;
@@ -6,8 +10,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class Server {
 

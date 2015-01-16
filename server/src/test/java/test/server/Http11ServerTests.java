@@ -1,12 +1,12 @@
-package test;
+package test.server;
 
-import http.Client;
-import http.Http11;
-import http.Server;
+import propolis.server.Http11;
+import propolis.server.Server;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import propolis.client.Client;
 
 public class Http11ServerTests {
 

@@ -1,4 +1,6 @@
-package http;
+package propolis.server;
+
+import propolis.shared.Messages;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,7 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
-import static http.Messages.Request;
+import static propolis.shared.Messages.Request;
 
 public class Handlers {
 

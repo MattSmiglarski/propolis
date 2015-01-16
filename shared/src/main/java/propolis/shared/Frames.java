@@ -1,4 +1,4 @@
-package http.http2;
+package propolis.shared;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,7 +9,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -21,7 +20,7 @@ public abstract class Frames {
     public static final int HEADER_SIZE = 9 * 8;
     public static final int SETTINGS_MAX_FRAME_LENGTH = 16384;
 
-    enum Error {
+    public enum Error {
         NO_ERROR, PROTOCOL_ERROR, INTERNAL_ERROR, FLOW_CONTROL_ERROR, SETTINGS_TIMEOUT,
         STREAM_CLOSED, FRAME_SIZE_ERROR, REFUSED_STREAM, CANCEL, COMPRESSION_ERROR,
         CONNECT_ERROR, ENHANCE_YOUR_CALM, INADEQUATE_SECURITY

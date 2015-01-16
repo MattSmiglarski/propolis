@@ -1,4 +1,4 @@
-package http.http2;
+package propolis.server.http2;
 
 /**
  * Stub -- not yet required.

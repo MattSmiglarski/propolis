@@ -1,8 +1,9 @@
-package http.http2;
+package propolis.shared;
 
-import java.util.concurrent.LinkedBlockingDeque;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.LinkedBlockingDeque;
 
 public interface Application extends FrameReceiver {
 
