@@ -2,6 +2,9 @@ package propolis.server.http2;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import propolis.server.Handlers;
+import propolis.server.Http11;
+import propolis.server.Http11Handler;
 import propolis.shared.Application;
 import propolis.shared.Frames;
 import propolis.shared.Messages;
@@ -21,62 +24,27 @@ public class Http2 {
     public static final byte[] PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes();
 
     public static void handleHttp2Connection(Socket client, Application application) {
+        Http11.handlerTemplate(client, (header, response, inputStream) -> {
+            Settings setting = new Settings();
 
-        log.debug("Handling connection from " + client + ": " + client.isClosed());
-
-        try {
-            InputStream is = client.getInputStream();
-            Messages.Request request = Messages.readRequest(client.getInputStream());
-            log.info("Received request " + request);
-
-            Messages.Response response = new Messages.Response();
-            OutputStream os = client.getOutputStream();
-            Messages.writeResponse(client.getOutputStream(), response);
-
-            // Write preface
-            Frames.SettingsFrame settingsFrame = new Frames.SettingsFrame();
-            settingsFrame.write(os);
-
-            // Read preface
-            BufferedReader lineReader = new BufferedReader(new InputStreamReader(is));
-            for (int i = 0; i < Http2.PREFACE.length; i++) {
-                if (Http2.PREFACE[i] == ((byte) '\n')) {
-                    String prefaceLine = lineReader.readLine();
-                    if (prefaceLine == null) {
-                        throw new RuntimeException("Null preface line. Connection closed?");
-                    }
-                    log.info("PREFACE: " + prefaceLine);
-                }
-            }
-
-            Frames.Frame.read(is, new Application.Adapter() {
-                public void onFrame(Frames.SettingsFrame frame) {
-                    log.info("Received settings");
-                }
-            });
-
-            Thread applicationFrameListeningThread = new Thread(() -> {
+            try {
                 while (client.isConnected()) {
-                    try {
-                        application.nextFrame().write(os);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        log.info("The thread has been interrupted.");
-                        break;
+                    if (inputStream.available() > 0) {
+                        application.sendFrame(Frames.Frame.readSync(inputStream));
+                    }
+
+                    Frames.Frame serverFrame = application.nextFrame();
+                    if (serverFrame != null) {
+                        serverFrame.write(client.getOutputStream());
                     }
                 }
-            });
-            applicationFrameListeningThread.start();
-
-            while (client.isConnected()) {
-                if (is.available() > 0) {
-                    Frames.Frame.read(is, application);
-                }
+            } catch (IOException e) {
+                log.error("Failure!", e);
             }
-        } catch (RuntimeException | IOException e) {
-            throw new RuntimeException(e);
-        } finally {
-            closeQuietly(client);
-        }
+
+            return outputStream -> {
+                response.status = 200;
+            };
+        });
     }
 }

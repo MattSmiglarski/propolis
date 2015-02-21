@@ -118,6 +118,13 @@ public abstract class Frames {
         public PushPromiseFrame() {
             super(Type.PUSH_PROMISE);
         }
+
+        @Override
+        protected void writePayload(ByteBuffer buffer) {
+            // TODO: Do padding, as required.
+            byte b = buffer.get();
+            int streamId = b >> 1;
+        }
     }
 
     public static class PingFrame extends Frame {

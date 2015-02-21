@@ -11,7 +11,7 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class Server {
+public abstract class Server {
 
     private static Logger log = LoggerFactory.getLogger(Server.class.getName());
 
@@ -61,6 +61,10 @@ public class Server {
             STARTING, STARTED, STOPPING, STOPPED
         }
         volatile Lifecycle lifecycle;
+
+        public TcpServer(TcpServable tcpServable) {
+            this(0, tcpServable);
+        }
 
         public TcpServer(int port, TcpServable tcpServable) {
             this.port = port;

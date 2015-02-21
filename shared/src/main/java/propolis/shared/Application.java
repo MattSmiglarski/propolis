@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public interface Application extends FrameReceiver {
 
@@ -11,7 +12,7 @@ public interface Application extends FrameReceiver {
 
     void streamError(Frames.Error error);
 
-    Frames.Frame nextFrame() throws InterruptedException;
+    Frames.Frame nextFrame();
 
     void sendFrame(Frames.Frame frame);
 
@@ -20,13 +21,108 @@ public interface Application extends FrameReceiver {
         void onFrame(F frame);
     }
 
+    public abstract static class UntypedAdapter implements Application {
+
+        protected volatile LinkedBlockingQueue<Frames.Frame> sendFrames = new LinkedBlockingQueue<>();
+
+        @Override
+        public void connectionError(Frames.Error error) {
+            throw new RuntimeException();
+        }
+
+        @Override
+        public void streamError(Frames.Error error) {
+            throw new RuntimeException();
+        }
+
+        @Override
+        public Frames.Frame nextFrame() {
+            if (sendFrames.peek() != null) {
+                try {
+                    return sendFrames.take();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return null;
+                }
+            } else {
+                return null;
+            }
+        }
+
+        @Override
+        public void sendFrame(Frames.Frame frame) {
+            sendFrames.add(frame);
+        }
+
+        public abstract void onAnyFrame(Frames.Frame frame);
+
+        @Override
+        public void onFrame(Frames.DataFrame frame) {
+            onAnyFrame(frame);
+        }
+
+        @Override
+        public void onFrame(Frames.HeadersFrame frame) {
+            onAnyFrame(frame);
+        }
+
+        @Override
+        public void onFrame(Frames.PriorityFrame frame) {
+            onAnyFrame(frame);
+        }
+
+        @Override
+        public void onFrame(Frames.ResetFrame frame) {
+            onAnyFrame(frame);
+        }
+
+        @Override
+        public void onFrame(Frames.SettingsFrame frame) {
+            onAnyFrame(frame);
+        }
+
+        @Override
+        public void onFrame(Frames.PushPromiseFrame frame) {
+            onAnyFrame(frame);
+        }
+
+        @Override
+        public void onFrame(Frames.PingFrame frame) {
+            onAnyFrame(frame);
+        }
+
+        @Override
+        public void onFrame(Frames.GoAwayFrame frame) {
+            onAnyFrame(frame);
+        }
+
+        @Override
+        public void onFrame(Frames.WindowUpdateFrame frame) {
+            onAnyFrame(frame);
+        }
+
+        @Override
+        public void onFrame(Frames.ContinuationFrame frame) {
+            onAnyFrame(frame);
+        }
+    }
+
     public static class Adapter implements Application {
 
         protected Logger log = LoggerFactory.getLogger(Application.class.getName());
         protected volatile LinkedBlockingDeque<Frames.Frame> sendFrames = new LinkedBlockingDeque<>();
 
-        public Frames.Frame nextFrame() throws InterruptedException {
-            return sendFrames.take();
+        public Frames.Frame nextFrame() {
+            if (sendFrames.peek() != null) {
+                try {
+                    return sendFrames.take();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return null;
+                }
+            } else {
+                return null;
+            }
         }
 
         @Override

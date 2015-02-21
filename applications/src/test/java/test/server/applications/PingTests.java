@@ -37,12 +37,9 @@ public class PingTests {
     private static final Logger log = LoggerFactory.getLogger(PingTests.class);
 
     @Test(timeout = 10000)
+    // TODO: This sometimes fails!
     public void pingShouldWork() throws IOException, URISyntaxException {
-        Server.TcpServer server = new Server.TcpServer(
-                0, client -> {
-            PingApplication application = new PingApplication();
-            Http2.handleHttp2Connection(client, application);
-        });
+        Server.TcpServer server = new Server.TcpServer(client -> Http2.handleHttp2Connection(client, new PingApplication()));
         Server.Daemon daemon = new Server.Daemon(server);
         daemon.start();
 

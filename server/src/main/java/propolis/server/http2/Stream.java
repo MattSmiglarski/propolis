@@ -1,7 +1,7 @@
 package propolis.server.http2;
 
 /**
- * Stub -- not yet required.
+ * Stub -- not yet implemented.
  */
 public class Stream {
 

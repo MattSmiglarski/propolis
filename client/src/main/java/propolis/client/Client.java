@@ -79,7 +79,6 @@ public class Client {
 
             application.sendFrame(new Frames.PingFrame());
             Frames.Frame.read(is, application);
-            socket.close();
         } catch (ConnectException e) {
             throw new RuntimeException(e.getMessage());
         } catch (IOException e) {

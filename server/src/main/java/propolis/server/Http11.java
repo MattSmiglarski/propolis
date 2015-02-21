@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 
 import static propolis.shared.Messages.Request;
 import static propolis.shared.Utils.closeQuietly;
@@ -17,9 +18,10 @@ public class Http11 {
     private static Logger log = LoggerFactory.getLogger(Http11.class.getName());
 
     public static void handleHttp11Connection(Socket client) {
+        handlerTemplate(client, Handlers::rootHandler);
+    }
 
-        log.debug("Handling connection from " + client + ": " + client.isClosed());
-
+    public static void handlerTemplate(Socket client, Http11Handler handler) {
         try {
             Request request = Messages.readRequest(client.getInputStream());
             Messages.Response response = new Messages.Response();
@@ -30,10 +32,8 @@ public class Http11 {
                 response.status = 400;
                 responseBodyCallback = null;
             } else {
-                responseBodyCallback = Handlers.rootHandler(request, response, client.getInputStream());
+                responseBodyCallback = handler.handle(request, response, client.getInputStream());
             }
-
-            log.debug("Response header has been written");
 
             if (responseBodyCallback != null) {
                 log.debug("Writing response body.");
