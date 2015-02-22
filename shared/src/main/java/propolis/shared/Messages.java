@@ -81,6 +81,10 @@ public class Messages {
         public String method;
         public String target;
 
+        @Override
+        public String toString() {
+            return String.format("%s %s", method, target);
+        }
     }
 
     public static class Response extends Message {

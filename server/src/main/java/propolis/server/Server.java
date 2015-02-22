@@ -22,17 +22,32 @@ public abstract class Server {
 
     public static class Daemon {
 
-        TcpServer server;
-        Thread thread;
+        private TcpServer server;
 
         public Daemon(TcpServer server) {
             this.server = server;
-            this.thread = new Thread(null, server, "Server");
         }
 
         public void start() {
+
+            if (TcpServer.Lifecycle.STOPPING == server.lifecycle) {
+                do {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        log.warn("Thread interrupted! " + e.getMessage());
+                        Thread.currentThread().interrupt();
+                    }
+                } while (server.lifecycle == TcpServer.Lifecycle.STOPPING);
+            }
+
+            if (server.lifecycle != null && server.lifecycle.compareTo(TcpServer.Lifecycle.STOPPING) < 0) {
+                throw new RuntimeException("Cannot start the same daemon twice.");
+            }
+
             log.info("Starting server");
-            thread.start(); // BUG: Don't allow starting twice.
+            Thread thread = new Thread(null, server, "Server");
+            thread.start();
 
             do { // Wait until startup.
                 try {

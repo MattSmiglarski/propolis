@@ -1,6 +1,8 @@
 package test;
 
 import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import propolis.shared.Frames;
 
 import java.io.IOException;
@@ -12,6 +14,8 @@ import java.util.Map;
 
 public abstract class Assertions {
 
+    private static final Logger log = LoggerFactory.getLogger(Assertions.class);
+
     public static void assertPing(InputStream is) throws IOException {
         Frames.PingFrame pingFrame = new Frames.PingFrame();
 
@@ -19,7 +23,7 @@ public abstract class Assertions {
         is.read(header);
         ByteBuffer buffer = ByteBuffer.wrap(header).order(ByteOrder.BIG_ENDIAN);
         final int length = buffer.getInt();
-        System.out.println(String.format("Received frame with length: %d %X", length, length));
+        log.info(String.format("Received frame with length: %d %X", length, length));
         byte[] typeReservedAndFlags = new byte[5];
         buffer.get(typeReservedAndFlags);
         pingFrame.streamId = buffer.getInt();
@@ -43,7 +47,7 @@ public abstract class Assertions {
         is.read(header);
         ByteBuffer buffer = ByteBuffer.wrap(header).order(ByteOrder.BIG_ENDIAN);
         final int length = buffer.getInt();
-        System.out.println(String.format("Received frame with length: %d %X", length, length));
+        log.info(String.format("Received frame with length: %d %X", length, length));
         byte[] typeReservedAndFlags = new byte[5];
         buffer.get(typeReservedAndFlags);
         int streamId = buffer.getInt();
@@ -60,7 +64,7 @@ public abstract class Assertions {
         Assert.assertEquals(4, type);
 
         int flags = typeReservedAndFlags[4];
-        Assert.assertEquals(1, flags & 0x1); // ack
+        Assert.assertEquals("", 1, flags & 0x1); // ack
         Map<Integer, Integer> settings = new HashMap<>();
         for (int i = 0; i < payload.length; i += 6) {
             int settingIdentifier = payload[i]

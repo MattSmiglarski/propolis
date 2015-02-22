@@ -16,7 +16,7 @@ import java.util.concurrent.ExecutionException;
 
 public abstract class Frames {
 
-    private static final Logger log = LoggerFactory.getLogger(Frames.class);
+    private static final Logger LOG = LoggerFactory.getLogger(Frames.class);
     public static final int HEADER_SIZE = 9 * 8;
     public static final int SETTINGS_MAX_FRAME_LENGTH = 16384;
 
@@ -161,6 +161,11 @@ public abstract class Frames {
         public void read(byte[] payload) {
             data = payload;
         }
+
+        @Override
+        public String toString() {
+            return ack? "ping" : "pong";
+        }
     }
 
     public static class GoAwayFrame extends Frame {
@@ -204,6 +209,8 @@ public abstract class Frames {
     }
 
     public static abstract class Frame {
+
+        protected final Logger log = LoggerFactory.getLogger(this.getClass());
 
         public int streamId;
         public final int type;
@@ -323,7 +330,7 @@ public abstract class Frames {
 
             int flags = typeReservedAndFlags[4];
 
-            log.info(String.format("Received frame with length: %d, type: %s, flags: %d", length, Type.values()[type], flags));
+            LOG.info(String.format("Received frame with length: %d, type: %s, flags: %d", length, Type.values()[type], flags));
 
             if (length > SETTINGS_MAX_FRAME_LENGTH) {
                 throw new RuntimeException(String.format("Payload of size %d exceeded the maximum length of %d.", length, SETTINGS_MAX_FRAME_LENGTH));
@@ -339,7 +346,7 @@ public abstract class Frames {
                     throw new RuntimeException(String.format("Failed to consume the entire payload! Expected %d, actual %d.", length, bytesRead));
                 }
             } else {
-                log.info("Empty payload. Continuing...");
+                LOG.info("Empty payload. Continuing...");
             }
 
             switch (types[type]) {

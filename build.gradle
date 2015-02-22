@@ -14,6 +14,7 @@ subprojects {
         compile group: 'ch.qos.logback', name: 'logback-classic', version: '1+'
 
         testCompile project(':test')
+        testRuntime group: 'org.codehaus.groovy', name: 'groovy', version: '2.2.1'
     }
 }
 
@@ -51,5 +52,7 @@ project(':test') {
         compile project(':client')
         compile project(':server')
         compile project(':applications')
+
+        testRuntime group: 'org.codehaus.groovy', name: 'groovy', version: '2.2.1'
     }
 }

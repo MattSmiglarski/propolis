@@ -34,7 +34,14 @@ public class TcpServerTests {
 
     @Test
     public void shouldDecodeStringOverTcp() throws IOException {
-        System.out.println(input);
         Assert.assertEquals(input, Utils.requestResponseOverSocket(client, input));
+    }
+
+    @Test(timeout = 4000)
+    public void shouldRestartDaemonLotsOfTimes() {
+        for (int i=0; i<10; i++) {
+            daemon.stop();
+            daemon.start();
+        }
     }
 }

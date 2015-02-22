@@ -31,6 +31,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class PingTests {
 
@@ -129,8 +131,16 @@ public class PingTests {
     }
 
     public void assertClientIsPingCompliant(Runnable clientRequest, ServerSocket server) {
-        int port = server.getLocalPort();
-        ExecutorService executor = Executors.newFixedThreadPool(10);
+        Thread.currentThread().setName("server");
+        ExecutorService executor = Executors.newFixedThreadPool(10, new ThreadFactory() {
+            private final AtomicInteger threadNumber = new AtomicInteger(1);
+
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r, "served connection" + threadNumber.getAndIncrement());
+            }
+        });
+
         try {
 
             Callable<Socket> singleUseServerConnection = () -> {
@@ -142,7 +152,7 @@ public class PingTests {
             };
 
             Future<Socket> pendingConnection = executor.submit(singleUseServerConnection);
-            executor.submit(clientRequest);
+            new Thread(clientRequest, "client").start();
             Socket client = pendingConnection.get();
 
             InputStream is = client.getInputStream();
