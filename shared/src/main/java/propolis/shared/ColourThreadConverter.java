@@ -17,7 +17,7 @@ public class ColourThreadConverter extends ForegroundCompositeConverterBase<ILog
         } else if (threadName.startsWith("server")) {
             return ANSIConstants.CYAN_FG;
         } else {
-            return threadName;
+            return ANSIConstants.DEFAULT_FG;
         }
     }
 }

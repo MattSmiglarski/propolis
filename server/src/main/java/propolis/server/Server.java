@@ -113,7 +113,7 @@ public abstract class Server {
     }
 
     public static void main(String[] args) {
-        Daemon daemon = new Daemon(new TcpServer(8000, Http11::handleHttp11Connection));
+        Daemon daemon = new Daemon(new TcpServer(8000, client -> Http11.handlerTemplate(client, Handlers::rootHandler)));
         Runtime.getRuntime().addShutdownHook(new Thread(daemon::stop));
         daemon.start();
         log.info("Press Control-C to exit");

@@ -77,7 +77,7 @@ public class PingTests {
 
     @Test(timeout = 5000)
     public void assertionsShouldWorkTogether() throws Throwable {
-        final ServerSocket server = new ServerSocket(0);
+        final ServerSocket server = new ServerSocket(1230);
         assertClientIsPingCompliant(
                 () -> assertServerHandlesPing("localhost", server.getLocalPort()),
                 server);

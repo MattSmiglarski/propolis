@@ -1,24 +1,26 @@
 subprojects {
 
     apply plugin: 'java'
+    apply plugin: 'idea'
+
     group = 'propolis'
     version= '0.1'
     sourceCompatibility = 1.8
-
-    repositories {
-        mavenCentral()
-    }
 
     dependencies {
         compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.+'
         compile group: 'ch.qos.logback', name: 'logback-classic', version: '1+'
 
         testCompile project(':test')
-        testRuntime group: 'org.codehaus.groovy', name: 'groovy', version: '2.2.1'
+        compile group: 'org.codehaus.groovy', name: 'groovy', version: '2.2.1'
     }
 }
 
 project(':applications') {
+
+    apply plugin: 'application'
+
+    mainClassName = 'propolis.applications.PingApplication'
 
     dependencies {
         compile project(':client')
@@ -30,7 +32,7 @@ project(':server') {
 
     apply plugin: 'application'
 
-    mainClassName = 'http.Server'
+    mainClassName = 'propolis.server.Server'
 
     dependencies {
         compile project(':shared')

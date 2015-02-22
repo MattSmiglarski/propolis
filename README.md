@@ -8,7 +8,7 @@ Propolis is the development name for a new HTTP 2 Server.
 
 ## Running
 ```Shell
-java -cp ./build/libs/propolis-1.0.jar Server
+gradle -q :server:run
 # Press Control-c to exit.
 ```
 

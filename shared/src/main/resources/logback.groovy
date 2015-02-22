@@ -12,7 +12,7 @@ appender("CONSOLE", ConsoleAppender) {
     conversionRule("threadColour", ColourThreadConverter)
 
     encoder(PatternLayoutEncoder) {
-        pattern = "%d{HH:mm:ss.SSS} %threadColour([%thread]) %highlight(%-5level) %logger{36} - %msg%n"
+        pattern = "%d{HH:mm:ss.SSS} %highlight(%-5level) %threadColour([%thread]) %logger{36} - %msg%n"
     }
 }
 

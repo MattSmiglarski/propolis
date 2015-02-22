@@ -32,6 +32,7 @@ public class Handlers {
     }
 
     public static ResponseBodyCallback rootHandler(Request header, Messages.Response response, InputStream inputStream) {
+        log.info("Received request " + header);
         String[] pathComponents = header.target.split("/");
         if ("/".equals(header.target)) {
             return testHandler(header, response, inputStream);
