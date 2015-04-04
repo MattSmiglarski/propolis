@@ -5,3 +5,5 @@ include 'server'
 include 'applications'
 include 'client'
 include 'test'
+include 'ui'
+

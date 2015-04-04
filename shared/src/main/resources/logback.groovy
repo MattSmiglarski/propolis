@@ -1,7 +1,6 @@
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder
 import ch.qos.logback.core.ConsoleAppender
 import ch.qos.logback.core.status.OnConsoleStatusListener
-import propolis.shared.ColourThreadConverter
 
 statusListener(OnConsoleStatusListener)
 
@@ -9,10 +8,8 @@ def appenderList = ["CONSOLE"]
 
 appender("CONSOLE", ConsoleAppender) {
 
-    conversionRule("threadColour", ColourThreadConverter)
-
     encoder(PatternLayoutEncoder) {
-        pattern = "%d{HH:mm:ss.SSS} %highlight(%-5level) %threadColour([%thread]) %logger{36} - %msg%n"
+        pattern = "%d{HH:mm:ss.SSS} %highlight(%-5level) [%thread] %logger{36} - %msg%n"
     }
 }
 
