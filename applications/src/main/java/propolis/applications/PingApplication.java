@@ -34,6 +34,11 @@ public class PingApplication extends Application.Adapter {
         }
     }
 
+    @Override
+    public String toString() {
+        return "Ping Application";
+    }
+
     public static void main(String[] args) {
         Server.TcpServer server = new Server.TcpServer(8001, client -> Http2.handleHttp2Connection(client, new PingApplication()));
         Server.Daemon daemon = new Server.Daemon(server);

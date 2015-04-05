@@ -16,7 +16,7 @@ public abstract class Server {
     private static Logger log = LoggerFactory.getLogger(Server.class.getName());
 
     @FunctionalInterface
-    public static interface TcpServable {
+    public interface TcpServable {
         void handleConnection(Socket client);
     }
 
@@ -56,12 +56,17 @@ public abstract class Server {
                     log.error("Thread interrupted!");
                     Thread.currentThread().interrupt();
                 }
-            } while (server.lifecycle.compareTo(TcpServer.Lifecycle.STARTED) < 0);
+            } while (TcpServer.Lifecycle.STARTED.compareTo(server.lifecycle) < 0);
         }
 
         public void stop() {
             log.info("Stopping server");
             server.lifecycle = TcpServer.Lifecycle.STOPPING; // BUG? What if the lifecycle is already STOPPED?
+        }
+
+        @Override
+        public String toString() {
+            return String.format("Daemon running %s", server);
         }
     }
 
@@ -72,7 +77,7 @@ public abstract class Server {
         ServerSocket socket;
         ExecutorService clientConnectionExecutor = Executors.newFixedThreadPool(10);
 
-        static enum Lifecycle {
+        public enum Lifecycle {
             STARTING, STARTED, STOPPING, STOPPED
         }
         volatile Lifecycle lifecycle;
@@ -94,12 +99,13 @@ public abstract class Server {
                 this.port = socket.getLocalPort();
                 log.info("Server started on port " + port);
                 while (lifecycle.compareTo(Lifecycle.STOPPING) < 0) {
-                    // INEFFICIENT: Accept on multiple threads. Is there an alternative mechanism?
                     Socket nextClient = socket.accept();
                     clientConnectionExecutor.execute(
                             () -> callback.handleConnection(nextClient)
                     );
                 }
+
+                // TODO: Wait for client connections to terminate or timeout?
             } catch (BindException e) {
                 throw new RuntimeException(e.getMessage());
             } catch (IOException e) {
@@ -109,6 +115,11 @@ public abstract class Server {
                 lifecycle = Lifecycle.STOPPED;
                 log.info("Server stopped");
             }
+        }
+
+        @Override
+        public String toString() {
+            return String.format("Server: %s on port %d", lifecycle, port);
         }
     }
 

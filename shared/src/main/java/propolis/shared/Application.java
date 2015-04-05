@@ -17,11 +17,11 @@ public interface Application extends FrameReceiver {
     void sendFrame(Frames.Frame frame);
 
     @FunctionalInterface
-    public static interface FrameHandler<F extends Frames.Frame> {
+    interface FrameHandler<F extends Frames.Frame> {
         void onFrame(F frame);
     }
 
-    public abstract static class UntypedAdapter implements Application {
+    abstract class UntypedAdapter implements Application {
 
         protected volatile LinkedBlockingQueue<Frames.Frame> sendFrames = new LinkedBlockingQueue<>();
 
@@ -107,7 +107,7 @@ public interface Application extends FrameReceiver {
         }
     }
 
-    public static class Adapter implements Application {
+    class Adapter implements Application {
 
         protected Logger log = LoggerFactory.getLogger(Application.class.getName());
         protected volatile LinkedBlockingDeque<Frames.Frame> sendFrames = new LinkedBlockingDeque<>();
