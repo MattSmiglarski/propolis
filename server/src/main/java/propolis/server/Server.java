@@ -77,6 +77,10 @@ public abstract class Server {
         ServerSocket socket;
         ExecutorService clientConnectionExecutor = Executors.newFixedThreadPool(10);
 
+        public String getUrl() {
+            return String.format("%s://%s:%d", "http", "localhost", port);
+        }
+
         public enum Lifecycle {
             STARTING, STARTED, STOPPING, STOPPED
         }

@@ -76,6 +76,16 @@ public abstract class Utils {
         }
     }
 
+    /**
+     * String request-response over a socket.
+     * This method features a call to sleep() due to not knowing the content length of the response,
+     * so should be avoided by callers who do know the expeted content length.
+     *
+     * @param client
+     * @param input
+     * @return
+     * @throws IOException
+     */
     public static String requestResponseOverSocket(Socket client, String input) throws IOException {
         InputStream is = client.getInputStream();
         OutputStream os = client.getOutputStream();
