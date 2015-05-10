@@ -2,7 +2,6 @@ package propolis.server;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import propolis.shared.Utils;
 
 import java.io.IOException;
 import java.net.BindException;
@@ -17,7 +16,7 @@ public abstract class Server {
 
     @FunctionalInterface
     public interface TcpServable {
-        void handleConnection(Socket client);
+        void handleConnection(Socket client) throws IOException;
     }
 
     public static class Daemon {
@@ -105,7 +104,13 @@ public abstract class Server {
                 while (lifecycle.compareTo(Lifecycle.STOPPING) < 0) {
                     Socket nextClient = socket.accept();
                     clientConnectionExecutor.execute(
-                            () -> callback.handleConnection(nextClient)
+                            () -> {
+                                try {
+                                    callback.handleConnection(nextClient);
+                                } catch (IOException e) {
+                                    log.error("Failed to service connection", e);
+                                }
+                            }
                     );
                 }
 
@@ -128,7 +133,7 @@ public abstract class Server {
     }
 
     public static void main(String[] args) {
-        Daemon daemon = new Daemon(new TcpServer(8000, client -> Http11.handlerTemplate(client, Handlers::rootHandler)));
+        Daemon daemon = new Daemon(new TcpServer(8000, client -> Templates.handlerTemplate(client, Handlers::rootHandler)));
         Runtime.getRuntime().addShutdownHook(new Thread(daemon::stop));
         daemon.start();
         log.info("Press Control-C to exit");

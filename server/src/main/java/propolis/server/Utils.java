@@ -1,13 +1,11 @@
-package propolis.shared;
+package propolis.server;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.Arrays;
@@ -89,7 +87,7 @@ public abstract class Utils {
     public static String requestResponseOverSocket(Socket client, String input) throws IOException {
         InputStream is = client.getInputStream();
         OutputStream os = client.getOutputStream();
-        os.write(input.getBytes());
+        os.write(input.getBytes("UTF-8"));
         os.flush();
         // There is no data at the moment, but allow the server some time for further response data,
         // before hanging up.

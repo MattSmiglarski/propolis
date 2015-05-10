@@ -19,18 +19,6 @@ subprojects {
     }
 }
 
-project(':applications') {
-
-    apply plugin: 'application'
-
-    mainClassName = 'propolis.applications.PingApplication'
-
-    dependencies {
-        compile project(':client')
-        compile project(':server')
-    }
-}
-
 project(':server') {
 
     apply plugin: 'application'
@@ -38,14 +26,6 @@ project(':server') {
     mainClassName = 'propolis.server.Server'
 
     dependencies {
-        compile project(':shared')
-    }
-}
-
-project(':client') {
-
-    dependencies {
-        compile project(':shared')
     }
 }
 
@@ -54,8 +34,6 @@ project(':test') {
     dependencies {
 
         compile group: 'junit', name: 'junit', version: '4.11'
-        compile project(':client')
         compile project(':server')
-        compile project(':applications')
     }
 }

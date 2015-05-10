@@ -2,30 +2,26 @@ package propolis.server;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import propolis.shared.Messages;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Function;
 
-import static propolis.shared.Messages.Request;
-import static propolis.shared.Utils.closeQuietly;
+import static propolis.server.HttpComponents.Request;
+import static propolis.server.Utils.closeQuietly;
 
-public class Http11 {
+public class Templates {
 
-    private static Logger log = LoggerFactory.getLogger(Http11.class.getName());
+    private static Logger log = LoggerFactory.getLogger(Templates.class.getName());
 
-    public static void handleHttp11Connection(Socket client) {
-        handlerTemplate(client, Handlers::rootHandler);
-    }
-
-    public static void handlerTemplate(Socket client, Http11Handler handler) {
+    public static void handlerTemplate(Socket client, Handlers.Http11Handler handler) {
         try {
-            Request request = Messages.readRequest(client.getInputStream());
-            Messages.Response response = new Messages.Response();
-            Messages.writeResponse(client.getOutputStream(), response);
+            HttpIOStream http = new HttpIOStream(client);
+
+            Request request = http.readHttpRequest();
+            HttpComponents.Response response = new HttpComponents.Response();
+            http.writeHttpResponse(response);
 
             Handlers.ResponseBodyCallback responseBodyCallback;
             if (!validateHeader(request)) {
