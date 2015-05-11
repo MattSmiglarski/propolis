@@ -145,6 +145,21 @@ public class TcpServer implements Runnable {
         });
     }
 
+    @Override
+    public String toString() {
+        String status;
+        if (terminated) {
+            status = "terminated";
+        } else if (terminating) {
+            status = "terminating";
+        } else if (started) {
+            status = "started";
+        } else {
+            status = "starting";
+        }
+        return String.format("Server %s on %s", status, serverSocket.getLocalSocketAddress());
+    }
+
     public static void main(String[] args) throws IOException, InterruptedException {
         TcpServer tcpServer = TcpServer.newTcpServer(8081);
         tcpServer.waitForStart();
