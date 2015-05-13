@@ -39,6 +39,7 @@ public class TcpServer implements Runnable {
     }
 
     public void stop() {
+        log.info("Stopping server " + this);
         terminating = true;
         server.shutdown();
         connections.shutdown();
