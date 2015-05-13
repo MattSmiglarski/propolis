@@ -87,6 +87,10 @@ public class TcpServer implements Runnable {
         return serverSocket;
     }
 
+    public void setConnectionHandler(TcpServable connectionHandler) {
+        this.connectionHandler = connectionHandler;
+    }
+
     @FunctionalInterface
     public interface TcpServable {
         void handleConnection(Socket client) throws IOException;
