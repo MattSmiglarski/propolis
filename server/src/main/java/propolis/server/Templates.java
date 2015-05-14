@@ -20,17 +20,18 @@ public class Templates {
             HttpIOStream http = new HttpIOStream(client);
 
             Request request = http.readHttpRequest();
-            HttpComponents.Response response = new HttpComponents.Response();
-            http.writeHttpResponse(response);
+            HttpComponents.Response response;
 
             Handlers.ResponseBodyCallback responseBodyCallback;
-            if (!validateHeader(request)) {
-                response.status = 400;
+            if (!validateRequest(request)) {
+                response = new HttpComponents.Response(400, "Bad request"); // TODO: Configure default response mesasges.
                 responseBodyCallback = null;
             } else {
+                response = HttpComponents.Response.ok();
                 responseBodyCallback = handler.handle(request, response, client.getInputStream());
             }
 
+            http.writeHttpResponse(response);
             if (responseBodyCallback != null) {
                 log.debug("Writing response body.");
                 responseBodyCallback.handleResponseBody(client.getOutputStream());
@@ -42,7 +43,7 @@ public class Templates {
         }
     }
 
-    public static boolean validateHeader(Request header) {
+    public static boolean validateRequest(Request header) {
         List<String> validMethods = Arrays.asList("HEAD", "GET", "POST");
         return validMethods.contains(header.method);
     }

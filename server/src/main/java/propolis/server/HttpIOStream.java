@@ -159,29 +159,28 @@ public class HttpIOStream implements Closeable {
 
         public HttpComponents.Request readHttpRequest() throws IOException {
             // RFC 7230 Section 3 - Message Format
-            HttpComponents.Request request = new HttpComponents.Request();
             MessageParser messageParser = new MessageParser(HttpInputStream.this);
             String[] startLineComponents = messageParser.requestLineComponents();
 
-            request.method = startLineComponents[0];
-            request.target = startLineComponents[1];
-            request.version = startLineComponents[2];
-            request.headers = messageParser.headers();
-            return request;
+            return new HttpComponents.Request(
+                    startLineComponents[0],
+                    startLineComponents[1],
+                    startLineComponents[2],
+                    messageParser.headers()
+            );
         }
 
         public HttpComponents.Response readHttpResponse() throws IOException {
             // RFC 7230 Section 3 - Message Format
-            HttpComponents.Response response = new HttpComponents.Response();
             MessageParser messageParser = new MessageParser(input);
             String[] startLineComponents = messageParser.statusLineComponents();
 
-            response.version = startLineComponents[0];
-            response.status = Integer.parseInt(startLineComponents[1]);
-            response.reason = startLineComponents[2];
-            response.headers = messageParser.headers();
-
-            return response;
+            return new HttpComponents.Response(
+                    startLineComponents[0],
+                    Integer.parseInt(startLineComponents[1]),
+                    startLineComponents[2],
+                    messageParser.headers()
+            );
         }
 
         private class MessageParser {
