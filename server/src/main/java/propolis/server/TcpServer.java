@@ -27,7 +27,7 @@ public class TcpServer implements Runnable {
     private ServerSocket serverSocket;
     private ExecutorService server;
     private ExecutorService connections;
-    private TcpServable connectionHandler;
+    private volatile TcpServable connectionHandler;
 
     public TcpServer(ServerSocket serverSocket, TcpServable connectionHandler) throws IOException {
         this.serverSocket = serverSocket;
