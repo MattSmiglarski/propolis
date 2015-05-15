@@ -1,5 +1,4 @@
 rootProject.name = 'propolis'
 
 include 'server'
-include 'test'
 include 'webapp'

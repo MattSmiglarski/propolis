@@ -66,7 +66,7 @@ public class TcpServer implements Runnable {
     public void waitForStart() throws InterruptedException {
         synchronized (mutex) {
             if (!started) {
-                mutex.wait(3000);
+                mutex.wait(300);
             }
         }
     }
@@ -74,7 +74,7 @@ public class TcpServer implements Runnable {
     public void waitForStop() throws InterruptedException {
         synchronized (mutex) {
             if (!terminated) {
-                mutex.wait(3000);
+                mutex.wait(30);
             }
         }
     }

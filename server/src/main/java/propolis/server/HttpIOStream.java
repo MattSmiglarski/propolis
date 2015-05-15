@@ -7,13 +7,12 @@ import propolis.server.Frames.HttpFrame;
 import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.Socket;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -39,6 +38,10 @@ public class HttpIOStream implements Closeable {
 
     public HttpIOStream(Socket socket) {
         this.socket = socket;
+    }
+
+    public Socket getRawSocket() {
+        return socket;
     }
 
     public String readPreface() throws IOException {
@@ -93,11 +96,19 @@ public class HttpIOStream implements Closeable {
         socket.close();
     }
 
-    private class HttpInputStream extends InputStream {
+    private class HttpInputStream {
 
-        @Override
-        public int read() throws IOException {
-            return socket.getInputStream().read();
+        BufferedReader reader;
+
+        public BufferedReader getReader() {
+            if (reader == null) {
+                try {
+                    reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                } catch (IOException e) {
+                    throw new RuntimeException();
+                }
+            }
+            return reader;
         }
 
         /**
@@ -107,7 +118,7 @@ public class HttpIOStream implements Closeable {
          * @throws IOException
          */
         public String readPreface() throws IOException {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(input));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             for (int i = 0; i < HttpComponents.PREFACE.length; i++) {
                 if (HttpComponents.PREFACE[i] == ((byte) '\n')) {
                     String prefaceLine = reader.readLine();
@@ -122,7 +133,7 @@ public class HttpIOStream implements Closeable {
 
         public HttpFrame readFrame() throws IOException {
             byte[] header = new byte[HEADER_SIZE];
-            input.read(header);
+            socket.getInputStream().read(header);
             ByteBuffer buffer = ByteBuffer.wrap(header).order(ByteOrder.BIG_ENDIAN);
             final int length = buffer.getInt();
 
@@ -145,7 +156,7 @@ public class HttpIOStream implements Closeable {
             // Should we delay reading the payload?
             byte[] payload = new byte[length];
             if (length > 0) {
-                int bytesRead = input.read(payload);
+                int bytesRead = socket.getInputStream().read(payload);
                 if (bytesRead < 0) {
                     throw new RuntimeException("Failed to read anything from the input stream!");
                 } else if (bytesRead != length) {
@@ -159,7 +170,7 @@ public class HttpIOStream implements Closeable {
 
         public HttpComponents.Request readHttpRequest() throws IOException {
             // RFC 7230 Section 3 - Message Format
-            MessageParser messageParser = new MessageParser(HttpInputStream.this);
+            MessageParser messageParser = new MessageParser();
             String[] startLineComponents = messageParser.requestLineComponents();
 
             return new HttpComponents.Request(
@@ -172,7 +183,7 @@ public class HttpIOStream implements Closeable {
 
         public HttpComponents.Response readHttpResponse() throws IOException {
             // RFC 7230 Section 3 - Message Format
-            MessageParser messageParser = new MessageParser(input);
+            MessageParser messageParser = new MessageParser();
             String[] startLineComponents = messageParser.statusLineComponents();
 
             return new HttpComponents.Response(
@@ -185,18 +196,8 @@ public class HttpIOStream implements Closeable {
 
         private class MessageParser {
 
-            InputStream inputStream;
-            InputStreamReader isReader;
-            BufferedReader reader;
-
-            MessageParser(InputStream inputStream) {
-                this.inputStream = inputStream;
-                this.isReader = new InputStreamReader(inputStream);
-                this.reader = new BufferedReader(isReader);
-            }
-
             String startLine() throws IOException {
-                return reader.readLine();
+                return getReader().readLine();
             }
 
             String[] requestLineComponents() throws IOException {
@@ -211,15 +212,16 @@ public class HttpIOStream implements Closeable {
                 Map<String, String> headers = new HashMap<>();
                 String headerLine;
 
-                while ((headerLine = reader.readLine()).trim().length() > 0) {
+                while ((headerLine = getReader().readLine()).trim().length() > 0) {
                     // read until delimiter
                     // read remaining, discarding whitespace
+                    log.debug("Header: " + headerLine);
+
                     int split = headerLine.indexOf(':');
                     if (split == -1) {
                         log.warn("Invalid header! " + headerLine);
                         break;
                     }
-                    log.debug("Header: " + headerLine);
                     headers.put(headerLine.substring(0, split), headerLine.substring(split + 1).trim());
                 }
                 return headers;
@@ -227,12 +229,7 @@ public class HttpIOStream implements Closeable {
         }
     }
 
-    private class HttpOutputStream extends OutputStream {
-
-        @Override
-        public void write(int b) throws IOException {
-            socket.getOutputStream().write(b);
-        }
+    private class HttpOutputStream {
 
         public void write(HttpFrame frame) throws IOException {
             int maxLength = 16_384;
@@ -254,12 +251,12 @@ public class HttpIOStream implements Closeable {
                     .putInt(frame.streamId)
                     .put(frame.payload);
 
-            write(buffer.array(), 0, buffer.limit());
+            socket.getOutputStream().write(buffer.array(), 0, buffer.limit());
         }
 
         public void writeHttpResponse(HttpComponents.Response response) {
             try {
-                output.write(new ResponseBuilder().asBytes(response));
+                socket.getOutputStream().write(new ResponseBuilder().asBytes(response));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -267,14 +264,14 @@ public class HttpIOStream implements Closeable {
 
         public void writeHttpRequest(HttpComponents.Request request) {
             try {
-                output.write(new RequestBuilder().asBytes(request));
+                socket.getOutputStream().write(new RequestBuilder().asBytes(request));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
 
         public void writePreface() throws IOException {
-            output.write(HttpComponents.PREFACE);
+            socket.getOutputStream().write(HttpComponents.PREFACE);
         }
 
         abstract class MessageBuilder<M extends HttpComponents.Message> {
@@ -315,7 +312,7 @@ public class HttpIOStream implements Closeable {
             }
 
             public byte[] asBytes(M message) {
-                return asString(message).getBytes();
+                return asString(message).getBytes(Charset.defaultCharset());
             }
         }
 
