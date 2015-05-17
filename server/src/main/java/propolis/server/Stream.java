@@ -1,10 +1,29 @@
 package propolis.server;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.smartcardio.CommandAPDU;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Consumer;
+
 public class Stream {
 
+    private static Logger log = LoggerFactory.getLogger(Stream.class);
+
     private HttpIOStream stream;
+    private Consumer<Frames.HttpFrame> frameConsumer;
+    private LinkedBlockingQueue<Frames.HttpFrame> outputFrames;
     private State state = State.IDLE;
     private FrameFactory frameFactory = new FrameFactory();
+
+    public Stream(Consumer<Frames.HttpFrame> frameConsumer) {
+        this.frameConsumer = frameConsumer;
+    }
+
+    public State getState() {
+        return state;
+    }
 
     public enum State {
 

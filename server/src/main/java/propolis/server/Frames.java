@@ -22,42 +22,60 @@ public abstract class Frames {
 
     public static final Error[] errors = Error.values();
 
-    public static class FrameHeader {
-        int length;
-        int type;
-        int flags;
-        boolean reserved;
-        int streamId;
-    }
-
     public enum Type {
         DATA, HEADERS, PRIORITY, RST_STREAM, SETTINGS, PUSH_PROMISE, PING, GO_AWAY, WINDOW_UPDATE, CONTINUATION
     }
 
     public static final Type[] types = Type.values();
 
-    public static class DataFrame {
-        int padding;
-        byte[] data;
+    public interface Frame {
+        HttpFrame asHttpFrame();
     }
 
-    public static class HeadersFrame {
+    public static class DataFrame implements Frame {
+
+        int padding;
+        byte[] data;
+
+        @Override
+        public HttpFrame asHttpFrame() {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    public static class HeadersFrame implements Frame {
         Map<String, String> headers;
         boolean exclusive;
         int weight;
+
+        @Override
+        public HttpFrame asHttpFrame() {
+            throw new UnsupportedOperationException();
+        }
     }
 
-    public static class PriorityFrame {}
+    public static class PriorityFrame implements Frame {
 
-    public static class ResetFrame {
+        @Override
+        public HttpFrame asHttpFrame() {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    public static class ResetFrame implements Frame {
         Error error;
 
         protected void writePayload(DataOutputStream os) throws IOException {
             os.writeInt(error.ordinal());
         }
+
+        @Override
+        public HttpFrame asHttpFrame() {
+            throw new UnsupportedOperationException();
+        }
     }
 
-    public static class SettingsFrame {
+    public static class SettingsFrame implements Frame {
 
         public boolean ack;
         public final Map<Setting, Integer> settings;
@@ -76,18 +94,42 @@ public abstract class Frames {
             this.ack = ack;
             this.settings = settings;
         }
+
+        @Override
+        public HttpFrame asHttpFrame() {
+            ByteBuffer buffer = ByteBuffer.allocate(6 * settings.size());
+            for (Map.Entry<Frames.SettingsFrame.Setting, Integer> entry : settings.entrySet()) {
+                Integer settingIdentifier = entry.getKey().ordinal();
+                Integer value = entry.getValue();
+
+                buffer.put((byte) (0x2 & settingIdentifier));
+                buffer.put((byte) (0x1 & settingIdentifier));
+                buffer.putInt(value);
+            }
+            return new Frames.HttpFrame(
+                    0,
+                    Frames.Type.SETTINGS,
+                    ack? 1 : 0,
+                    buffer.array()
+            );
+        }
     }
 
-    public static class PushPromiseFrame {
+    public static class PushPromiseFrame implements Frame {
 
         public void writePayload(ByteBuffer buffer) {
             // TODO: Do padding, as required.
             byte b = buffer.get();
             int streamId = b >> 1;
         }
+
+        @Override
+        public HttpFrame asHttpFrame() {
+            throw new UnsupportedOperationException();
+        }
     }
 
-    public static class PingFrame {
+    public static class PingFrame implements Frame {
 
         public byte[] data;
         public boolean ack;
@@ -110,12 +152,25 @@ public abstract class Frames {
         }
 
         @Override
+        public HttpFrame asHttpFrame() {
+            if (data.length != 8) {
+                throw new RuntimeException("Ping payload must be length 8, not " + data.length);
+            }
+            return new Frames.HttpFrame(
+                    0,
+                    Frames.Type.PING,
+                    ack? 1 : 0,
+                    data
+            );
+        }
+
+        @Override
         public String toString() {
             return String.format("%s : %s", ack? "ping" : "pong", new String(data));
         }
     }
 
-    public static class GoAwayFrame {
+    public static class GoAwayFrame implements Frame {
 
         int lastStreamId;
         public Error error;
@@ -134,12 +189,31 @@ public abstract class Frames {
             data = new byte[payload.limit() - payload.position()];
             payload.get(data);
         }
+
+        @Override
+        public HttpFrame asHttpFrame() {
+            throw new UnsupportedOperationException();
+        }
     }
 
-    public static class WindowUpdateFrame {}
-    public static class ContinuationFrame {}
+    public static class WindowUpdateFrame implements Frame {
 
-    public static class HttpFrame {
+        @Override
+        public HttpFrame asHttpFrame() {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    public static class ContinuationFrame implements Frame {
+
+        @Override
+        public HttpFrame asHttpFrame() {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    public static class HttpFrame implements Frame {
+
         public int streamId;
         public int type;
         public int flags;
@@ -154,6 +228,11 @@ public abstract class Frames {
             this.type = type;
             this.flags = flags;
             this.payload = payload;
+        }
+
+        @Override
+        public HttpFrame asHttpFrame() {
+            throw new UnsupportedOperationException();
         }
     }
 }
