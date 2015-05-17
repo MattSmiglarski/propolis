@@ -6,6 +6,8 @@ import org.slf4j.LoggerFactory;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.util.HashMap;
 import java.util.Map;
 
 public abstract class Frames {
@@ -80,6 +82,7 @@ public abstract class Frames {
         public boolean ack;
         public final Map<Setting, Integer> settings;
 
+
         public enum Setting {
 
             SETTINGS_HEADER_TABLE_SIZE,
@@ -88,6 +91,10 @@ public abstract class Frames {
             SETTINGS_INITIAL_WINDOW_SIZE,
             SETTINGS_MAX_FRAME_SIZE,
             SETTINGS_MAX_HEADER_LIST_SIZE;
+        }
+
+        public SettingsFrame() {
+            this(false, new HashMap<>());
         }
 
         public SettingsFrame(boolean ack, Map<Setting, Integer> settings) {
@@ -133,6 +140,10 @@ public abstract class Frames {
 
         public byte[] data;
         public boolean ack;
+
+        public PingFrame() {
+            this(false, "12345678".getBytes(Charset.defaultCharset()));
+        }
 
         public PingFrame(String dataString) {
             this(false, dataString.getBytes());

@@ -9,15 +9,15 @@ public class FrameFactory {
         throw new UnsupportedOperationException();
     }
 
-    public Frames.DataFrame createHeadersFrame(Frames.HttpFrame httpFrame) {
+    public Frames.HeadersFrame createHeadersFrame(Frames.HttpFrame httpFrame) {
         throw new UnsupportedOperationException();
     }
 
-    public Frames.DataFrame createPriorityFrame(Frames.HttpFrame httpFrame) {
+    public Frames.PriorityFrame createPriorityFrame(Frames.HttpFrame httpFrame) {
         throw new UnsupportedOperationException();
     }
 
-    public Frames.DataFrame createResetStreamFrame(Frames.HttpFrame httpFrame) {
+    public Frames.ResetFrame createResetStreamFrame(Frames.HttpFrame httpFrame) {
         throw new UnsupportedOperationException();
     }
 
@@ -40,7 +40,7 @@ public class FrameFactory {
         );
     }
 
-    public Frames.DataFrame createPushPromiseFrame(Frames.HttpFrame httpFrame) {
+    public Frames.PushPromiseFrame createPushPromiseFrame(Frames.HttpFrame httpFrame) {
         throw new UnsupportedOperationException();
     }
 
@@ -51,15 +51,15 @@ public class FrameFactory {
         );
     }
 
-    public Frames.DataFrame createGoAwayFrame(Frames.HttpFrame httpFrame) {
+    public Frames.GoAwayFrame createGoAwayFrame(Frames.HttpFrame httpFrame) {
         throw new UnsupportedOperationException();
     }
 
-    public Frames.DataFrame createWindowUpdateFrame(Frames.HttpFrame httpFrame) {
+    public Frames.WindowUpdateFrame createWindowUpdateFrame(Frames.HttpFrame httpFrame) {
         throw new UnsupportedOperationException();
     }
 
-    public Frames.DataFrame createContinuationFrame(Frames.HttpFrame httpFrame) {
+    public Frames.ContinuationFrame createContinuationFrame(Frames.HttpFrame httpFrame) {
         throw new UnsupportedOperationException();
     }
 }
