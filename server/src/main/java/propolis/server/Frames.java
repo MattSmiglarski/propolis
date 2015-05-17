@@ -3,8 +3,10 @@ package propolis.server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.swing.*;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.HashMap;
@@ -36,6 +38,7 @@ public abstract class Frames {
 
     public static class DataFrame implements Frame {
 
+        int streamId;
         int padLength;
         byte[] data;
 
@@ -44,12 +47,25 @@ public abstract class Frames {
 
         @Override
         public HttpFrame asHttpFrame() {
-            throw new UnsupportedOperationException();
+            int flags = (flagEndStream? 0x1 : 0)
+                    | (flagPadded? 0x8 : 0);
+
+            if (flagPadded) {
+                return new HttpFrame(streamId, 0x0, flags,
+                        ByteBuffer.allocate(1 + data.length + padLength)
+                            .put(integerToByte(padLength))
+                            .put(data)
+                            .put(new byte[padLength])
+                            .array());
+            } else {
+                return new HttpFrame(streamId, 0x0, flags, data);
+            }
         }
     }
 
     public static class HeadersFrame implements Frame {
 
+        int streamId;
         int padLength;
         Map<String, String> headers;
         boolean exclusive;
@@ -270,5 +286,17 @@ public abstract class Frames {
             this.flags = flags;
             this.payload = payload;
         }
+    }
+
+    /**
+     * Convert an integer into a byte.
+     *
+     * @param x An integer between 0 and 255.
+     * @return The least significant byte of the integer x.
+     */
+    private static byte integerToByte(int x) {
+        ByteBuffer buffer = ByteBuffer.allocate(4).putInt(x & 0xff);
+        buffer.rewind();
+        return buffer.get();
     }
 }

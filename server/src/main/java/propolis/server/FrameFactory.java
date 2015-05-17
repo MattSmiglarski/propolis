@@ -1,12 +1,27 @@
 package propolis.server;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
 public class FrameFactory {
 
     public Frames.DataFrame createDataFrame(Frames.HttpFrame httpFrame) {
-        throw new UnsupportedOperationException();
+        Frames.DataFrame dataFrame = new Frames.DataFrame();
+        dataFrame.streamId = httpFrame.streamId;
+        dataFrame.flagEndStream = ((httpFrame.flags & 0x1) == 1);
+        dataFrame.flagPadded = ((httpFrame.flags & 0x8) == 1);
+
+        if (dataFrame.flagPadded) {
+            ByteBuffer payload = ByteBuffer.wrap(httpFrame.payload);
+            dataFrame.padLength = Byte.toUnsignedInt(payload.get());
+            dataFrame.data = new byte[httpFrame.payload.length - dataFrame.padLength - 1];
+            payload.get(dataFrame.data);
+        } else {
+            dataFrame.data = httpFrame.payload;
+        }
+
+        return dataFrame;
     }
 
     public Frames.HeadersFrame createHeadersFrame(Frames.HttpFrame httpFrame) {
