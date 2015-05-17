@@ -60,7 +60,7 @@ public class Session {
 
     private void sendFrame(Frames.HttpFrame frame) {
         try {
-            sendFrames.put(frame.asHttpFrame());
+            sendFrames.put(frame);
         } catch (InterruptedException e) {
             throw new RuntimeException("Unhandled failure!", e); // TODO: Handle.
         }

@@ -36,8 +36,11 @@ public abstract class Frames {
 
     public static class DataFrame implements Frame {
 
-        int padding;
+        int padLength;
         byte[] data;
+
+        boolean flagEndStream;
+        boolean flagPadded;
 
         @Override
         public HttpFrame asHttpFrame() {
@@ -46,9 +49,17 @@ public abstract class Frames {
     }
 
     public static class HeadersFrame implements Frame {
+
+        int padLength;
         Map<String, String> headers;
         boolean exclusive;
+        int streamDependency;
         int weight;
+
+        boolean flagEndStream;
+        boolean flagEndHeaders;
+        boolean flagPadded;
+        boolean flagPriority;
 
         @Override
         public HttpFrame asHttpFrame() {
@@ -58,6 +69,11 @@ public abstract class Frames {
 
     public static class PriorityFrame implements Frame {
 
+        int streamId;
+        boolean exclusive;
+        int streamDependency;
+        int weight;
+
         @Override
         public HttpFrame asHttpFrame() {
             throw new UnsupportedOperationException();
@@ -65,11 +81,9 @@ public abstract class Frames {
     }
 
     public static class ResetFrame implements Frame {
-        Error error;
 
-        protected void writePayload(DataOutputStream os) throws IOException {
-            os.writeInt(error.ordinal());
-        }
+        int streamId;
+        Error error;
 
         @Override
         public HttpFrame asHttpFrame() {
@@ -79,9 +93,9 @@ public abstract class Frames {
 
     public static class SettingsFrame implements Frame {
 
+        int streamId;
         public boolean ack;
         public final Map<Setting, Integer> settings;
-
 
         public enum Setting {
 
@@ -123,6 +137,15 @@ public abstract class Frames {
     }
 
     public static class PushPromiseFrame implements Frame {
+
+        int streamId;
+        int padLength;
+        boolean reserved;
+        int promisedStreamId;
+        Map<String, String> headers;
+        boolean flagEndHeaders;
+        boolean flagPadded;
+
 
         public void writePayload(ByteBuffer buffer) {
             // TODO: Do padding, as required.
@@ -209,6 +232,9 @@ public abstract class Frames {
 
     public static class WindowUpdateFrame implements Frame {
 
+        int streamId;
+        int canTransmit;
+
         @Override
         public HttpFrame asHttpFrame() {
             throw new UnsupportedOperationException();
@@ -217,13 +243,17 @@ public abstract class Frames {
 
     public static class ContinuationFrame implements Frame {
 
+        int streamId;
+        Map<String, String> headers;
+        boolean flagEndHeaders;
+
         @Override
         public HttpFrame asHttpFrame() {
             throw new UnsupportedOperationException();
         }
     }
 
-    public static class HttpFrame implements Frame {
+    public static class HttpFrame {
 
         public int streamId;
         public int type;
@@ -239,11 +269,6 @@ public abstract class Frames {
             this.type = type;
             this.flags = flags;
             this.payload = payload;
-        }
-
-        @Override
-        public HttpFrame asHttpFrame() {
-            throw new UnsupportedOperationException();
         }
     }
 }

@@ -3,7 +3,6 @@ package propolis.server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.smartcardio.CommandAPDU;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
 
@@ -23,6 +22,46 @@ public class Stream {
 
     public State getState() {
         return state;
+    }
+
+    public Frames.DataFrame createDataFrame() {
+        return new Frames.DataFrame();
+    }
+
+    public Frames.HeadersFrame createHeadersFrame() {
+        return new Frames.HeadersFrame();
+    }
+
+    public Frames.PriorityFrame createPriorityFrame() {
+        return new Frames.PriorityFrame();
+    }
+
+    public Frames.ResetFrame createResetStreamFrame() {
+        return new Frames.ResetFrame();
+    }
+
+    public Frames.SettingsFrame createSettingsFrame() {
+        return new Frames.SettingsFrame();
+    }
+
+    public Frames.PushPromiseFrame createPushPromiseFrame() {
+        return new Frames.PushPromiseFrame();
+    }
+
+    public Frames.PingFrame createPingFrame() {
+        return new Frames.PingFrame();
+    }
+
+    public Frames.GoAwayFrame createGoAwayFrame() {
+        return new Frames.GoAwayFrame();
+    }
+
+    public Frames.WindowUpdateFrame createWindowUpdateFrame() {
+        return new Frames.WindowUpdateFrame();
+    }
+
+    public Frames.ContinuationFrame createContinuationFrame() {
+        return new Frames.ContinuationFrame();
     }
 
     public enum State {
