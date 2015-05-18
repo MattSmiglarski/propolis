@@ -297,6 +297,6 @@ public abstract class Frames {
     private static byte integerToByte(int x) {
         ByteBuffer buffer = ByteBuffer.allocate(4).putInt(x & 0xff);
         buffer.rewind();
-        return buffer.get();
+        return buffer.get(3);
     }
 }
