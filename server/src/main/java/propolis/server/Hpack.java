@@ -3,7 +3,9 @@ package propolis.server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -55,6 +57,27 @@ public class Hpack {
                         .putInt((int) n)
                         .asReadOnlyBuffer().get(3)
         ).array();
+    }
+
+    public byte[] encodeLiteralHeaderFieldWithIndexing(String name, String value) {
+        byte[] nameBytes = name.getBytes(Charset.defaultCharset());
+        byte[] valueBytes = value.getBytes(Charset.defaultCharset());
+
+        return ByteBuffer.allocate(3 + nameBytes.length + valueBytes.length)
+                .put((byte) 0x40)
+                .put((byte) 0x0a)
+                .put(nameBytes)
+                .put((byte) 0x0d)
+                .put(valueBytes)
+                .array();
+    }
+
+    public byte[] encodeLiteralHeaderFieldWithoutIndexing(String header, String value) {
+        throw new UnsupportedOperationException();
+    }
+
+    public byte[] encodeLiteralHeaderFieldNeverIndexed(String header, String value) {
+        throw new UnsupportedOperationException();
     }
 
     // encode string literal

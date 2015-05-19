@@ -2,6 +2,7 @@ package test;
 
 import org.junit.Assert;
 import org.junit.Test;
+import propolis.server.Frames;
 import propolis.server.Hpack;
 
 /**
@@ -51,20 +52,40 @@ public class HpackRfcExampleTests {
     /**
      * C.2.1.  Literal Header Field with Indexing
      */
+    @Test
     public void shouldDecodeLiteralHeaderFieldWithIndexing() {
+        byte[] expected = new byte[] {
+                0x40,0x0a, 0x63,0x75, 0x73,0x74, 0x6f,0x6d,  0x2d,0x6b, 0x65,0x79, 0x0d,0x63, 0x75,0x73,
+                0x74,0x6f, 0x6d,0x2d, 0x68,0x65, 0x61,0x64,  0x65,0x72
+        };
 
+        byte[] actual = hpack.encodeLiteralHeaderFieldWithIndexing("custom-key", "custom-header");
+        Assert.assertArrayEquals(expected, actual);
     }
 
     /**
      * C.2.2.  Literal Header Field without Indexing
      */
     public void shouldDecodeLiteralHeaderFieldWithoutIndexing() {
+        byte[] expected = new byte[] {
+                0x04,0x0c, 0x2f,0x73, 0x61,0x6d, 0x70,0x6c,  0x65,0x2f, 0x70,0x61, 0x74,0x68
+        };
+
+        byte[] actual = hpack.encodeLiteralHeaderFieldWithoutIndexing(":path", "/sample/path");
+        Assert.assertArrayEquals(expected, actual);
     }
 
     /**
      * C.2.3.  Literal Header Field Never Indexed
      */
     public void shouldDecodeLiteralHeaderFieldNeverIndexed() {
+        byte[] expected = new byte[] {
+                0x10,0x08, 0x70,0x61, 0x73,0x73, 0x77,0x6f,   0x72,0x64, 0x06,0x73, 0x65,0x63, 0x72,0x65,
+                0x74
+        };
+
+        byte[] actual = hpack.encodeLiteralHeaderFieldNeverIndexed("password", "secret");
+        Assert.assertArrayEquals(expected, actual);
     }
 
     /**
