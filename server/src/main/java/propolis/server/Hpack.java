@@ -11,13 +11,19 @@ public class Hpack {
 
     private static Logger log = LoggerFactory.getLogger(Hpack.class);
 
+    /**
+     * Number encoding.
+     *
+     * @param n The value to be encoded.
+     * @param prefixBits The number of bits in the prefix, no greater than 8.
+     * @return A byte array containing the encoding.
+     */
     public byte[] encode(long n, int prefixBits) {
 
+        if (prefixBits > 8) throw new UnsupportedOperationException();
+
         if (n < (1 << prefixBits)) {
-            /*
-             * We know that n will fit in the prefix bits, so
-             * write the value to a byte buffer and return the last byte.
-             */
+            // Since n will fit in the prefix bits, simply return the relevant byte.
             return new byte[] {
                     ByteBuffer.allocate(4)
                             .putInt((int) n)
@@ -31,10 +37,8 @@ public class Hpack {
         // Allocate the buffer, with a byte for each 7 bits.
         int i=0;
         do { /* nothing */ } while (n >> (7 * i++) > 1 << 7); // Count the required bytes.
-        ByteBuffer byteBuffer = ByteBuffer.allocate(1 + i); // The prefix byte and the rest.
-
-        // Write the prefix byte.
-        byteBuffer.put(prefix);
+        ByteBuffer byteBuffer = ByteBuffer.allocate(1 + i) // The prefix byte and the rest.
+                .put(prefix); // Write the prefix byte.
 
         // Write the middle bytes, which consist of a continuation flag followed by 7 bits.
         while (n >= (1 << 7)) {
@@ -42,19 +46,17 @@ public class Hpack {
                     (1 << 7) |           /* Continuation flag with... */
                     (n & ((1 << 7) - 1)) /* ...the next 7 bits. */
             ));
-            n >>= 7;
+            n >>= 7; // Divide by 128.
         }
 
-        // Write the last byte.
-        ByteBuffer buffer = ByteBuffer.allocate(4).putInt((int) (n & ((1 << 7) - 1)));
-        buffer.rewind();
-        byte lsb = buffer.get(3);
-        byteBuffer.put(lsb);
-
-        return byteBuffer.array();
+        // Write the last byte (which fits in 7 bits) and return the whole thing.
+        return byteBuffer.put(
+                ByteBuffer.allocate(4)
+                        .putInt((int) n)
+                        .asReadOnlyBuffer().get(3)
+        ).array();
     }
 
-    // encode unsigned variable length integer
     // encode string literal
     // huffman encoding
     // static table
