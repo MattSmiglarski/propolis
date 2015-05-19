@@ -6,6 +6,7 @@ import propolis.server.Hpack;
 
 /**
  * These tests are taken from Appendix C (Examples) of RFC-7541 [1]
+ * The comments indicate the subsection each test is taken from.
  *
  * [1] Peon, R. and H. Ruellan,
  * "HPACK: Header Compression for HTTP/2",
@@ -13,7 +14,7 @@ import propolis.server.Hpack;
  * May 2015,
  * <http://www.rfc-editor.org/info/rfc7541>.
  */
-public class HpackTests {
+public class HpackRfcExampleTests {
 
     private Hpack hpack = new Hpack();
 
@@ -30,32 +31,40 @@ public class HpackTests {
     /**
      * C.1.2.  Example 2: Encoding 1337 Using a 5-Bit Prefix
      */
+    @Test
     public void shouldEncode1337UsingA5BitPrefix() {
-        hpack.encode(1337, 5);
+        byte[] expected = new byte[] { 0b00011111, (byte) 0b10011010, 0b00001010 };
+        byte[] actual = hpack.encode(1337, 5);
+        Assert.assertArrayEquals(expected, actual);
     }
 
     /**
      * C.1.3.  Example 3: Encoding 42 Starting at an Octet Boundary
      */
+    @Test
     public void shouldEncode42StartingAtAnOctetBinary() {
+        byte[] expected = new byte[] { 0b0010_1010 };
+        byte[] actual = hpack.encode(42, 8);
+        Assert.assertArrayEquals(expected, actual);
     }
 
     /**
      * C.2.1.  Literal Header Field with Indexing
      */
-    public void shouldDecodeListeralHeaderFieldWithIndexing() {
+    public void shouldDecodeLiteralHeaderFieldWithIndexing() {
+
     }
 
     /**
      * C.2.2.  Literal Header Field without Indexing
      */
-    public void shouldDecodeListeralHeaderFieldWithoutIndexing() {
+    public void shouldDecodeLiteralHeaderFieldWithoutIndexing() {
     }
 
     /**
      * C.2.3.  Literal Header Field Never Indexed
      */
-    public void shouldDecodeListeralHeaderFieldNeverIndexed() {
+    public void shouldDecodeLiteralHeaderFieldNeverIndexed() {
     }
 
     /**

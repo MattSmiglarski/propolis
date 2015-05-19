@@ -1,20 +1,57 @@
 package propolis.server;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
 public class Hpack {
 
-    public byte[] encode(int n, int prefixBits) {
+    private static Logger log = LoggerFactory.getLogger(Hpack.class);
 
-        if (Integer.bitCount(n) <= n) {
-            ByteBuffer buffer = ByteBuffer.allocate(4).putInt(n & 0xff);
-            buffer.rewind();
-            return new byte[] { buffer.get(3) };
-        } else {
-            throw new UnsupportedOperationException();
+    public byte[] encode(long n, int prefixBits) {
+
+        if (n < (1 << prefixBits)) {
+            /*
+             * We know that n will fit in the prefix bits, so
+             * write the value to a byte buffer and return the last byte.
+             */
+            return new byte[] {
+                    ByteBuffer.allocate(4)
+                            .putInt((int) n)
+                            .asReadOnlyBuffer().get(3)
+            };
         }
+
+        byte prefix = (byte) ((1 << prefixBits) - 1); // eg. 00011111, when prefixBits=5.
+        n -= prefix;
+
+        // Allocate the buffer, with a byte for each 7 bits.
+        int i=0;
+        do { /* nothing */ } while (n >> (7 * i++) > 1 << 7); // Count the required bytes.
+        ByteBuffer byteBuffer = ByteBuffer.allocate(1 + i); // The prefix byte and the rest.
+
+        // Write the prefix byte.
+        byteBuffer.put(prefix);
+
+        // Write the middle bytes, which consist of a continuation flag followed by 7 bits.
+        while (n >= (1 << 7)) {
+            byteBuffer.put((byte) (
+                    (1 << 7) |           /* Continuation flag with... */
+                    (n & ((1 << 7) - 1)) /* ...the next 7 bits. */
+            ));
+            n >>= 7;
+        }
+
+        // Write the last byte.
+        ByteBuffer buffer = ByteBuffer.allocate(4).putInt((int) (n & ((1 << 7) - 1)));
+        buffer.rewind();
+        byte lsb = buffer.get(3);
+        byteBuffer.put(lsb);
+
+        return byteBuffer.array();
     }
 
     // encode unsigned variable length integer
