@@ -3,161 +3,196 @@ package propolis.server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.Buffer;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.HashMap;
 import java.util.Map;
 
 public class Hpack {
 
     private static Logger log = LoggerFactory.getLogger(Hpack.class);
 
+    public static final byte LITERAL_NEVER_INDEXED = (byte) 0x10;
+    public static final byte LITERAL_INDEXED = (byte) 0x40;
+    public static final byte LITERAL_NAME = (byte) 0x0a;
+
+    private HeaderIndex headerIndex = new HeaderIndex();
+
     /**
-     * Number encoding.
+     * Byte encode a number.
      *
      * @param n The value to be encoded.
-     * @param prefixBits The number of bits in the prefix, no greater than 8.
-     * @return A byte array containing the encoding.
+     * @param prefixBits The number of bits in the prefix, but no greater than 8.
+     * @return A new byte array containing the encoding.
      */
-    public byte[] encode(long n, int prefixBits) {
+    public byte[] encode(final long n, final int prefixBits) {
 
-        if (prefixBits > 8) throw new UnsupportedOperationException();
+        // TODO: Check prefix bits is positive.
+        // TODO: Find out if the spec supports multibyte prefixes.
+        if (prefixBits > 8) throw new UnsupportedOperationException("Multibyte prefixes are not supported.");
 
         if (n < (1 << prefixBits)) {
-            // Since n will fit in the prefix bits, simply return the relevant byte.
+            // Since remainder will fit in the prefix bits, simply return the relevant byte.
             return new byte[] {
-                    ByteBuffer.allocate(4)
+                    ByteBuffer
+                            .allocate(4)
                             .putInt((int) n)
                             .asReadOnlyBuffer().get(3)
             };
         }
 
         byte prefix = (byte) ((1 << prefixBits) - 1); // eg. 00011111, when prefixBits=5.
-        n -= prefix;
+        long remainder = n - prefix; // Assign to a new variable for readibility.
 
-        // Allocate the buffer, with a byte for each 7 bits.
-        int i=0;
-        do { /* nothing */ } while (n >> (7 * i++) > 1 << 7); // Count the required bytes.
-        ByteBuffer byteBuffer = ByteBuffer.allocate(1 + i) // The prefix byte and the rest.
+        // Count the continuation bytes.
+        // This is the number of 7 bit non-terminating blocks after subtracting the prefix..
+        int continuationBytes=0;
+        while (remainder >> (7 * continuationBytes) > 128) {
+            continuationBytes++;
+        }
+
+        // Allocate
+        ByteBuffer byteBuffer = ByteBuffer
+                .allocate(1 + continuationBytes + 1) // Account for the prefix byte, continuation bytes, and the final byte.
                 .put(prefix); // Write the prefix byte.
 
         // Write the middle bytes, which consist of a continuation flag followed by 7 bits.
-        while (n >= (1 << 7)) {
+        while (remainder >= (1 << 7)) {
             byteBuffer.put((byte) (
-                    (1 << 7) |           /* Continuation flag with... */
-                    (n & ((1 << 7) - 1)) /* ...the next 7 bits. */
+                    (1 << 7) |           /* Continuation flag OR-ed with... */
+                    (remainder & ((1 << 7) - 1)) /* ...the next 7 bits of the remainder. */
             ));
-            n >>= 7; // Divide by 128.
+            remainder >>= 7; // Divide by 128.
         }
 
-        // Write the last byte (which fits in 7 bits) and return the whole thing.
-        return byteBuffer.put(
-                ByteBuffer.allocate(4)
-                        .putInt((int) n)
-                        .asReadOnlyBuffer().get(3)
-        ).array();
+        return byteBuffer
+                // Write the last non-continuation byte (which fits in 7 bits).
+                .put((byte) remainder)
+                //  Return the whole thing.
+                .array();
+    }
+
+    /**
+     * Decode a byte representation of a number.
+     *
+     * @param bis The input containing the number.
+     * @param prefixBits An encoding setting.
+     * @return The decoded number.
+     */
+    public long decode(ByteArrayInputStream bis, int prefixBits) {
+        // TODO: Check the following on page 12 of the spec is correct w.r.t the exclusive comparison: if I < 2^N - 1, return I
+
+        int value = bis.read() & ((1 << prefixBits) - 1); // What comes before the prefix is not being trusted.
+        if (value >= (1 << prefixBits) - 1) {
+            int i = 0;
+
+            // Subsequent bytes are a 7-bit encoding, plus a continuation flag.
+            // Terminate the loop when the flag becomes unset.
+            int b;
+            do {
+                b = bis.read();
+                int increment = (b & 127) << (7 * i);
+                value += increment;
+                i++; // Next time, multiply the increment by another 128.
+            } while ((b & 128) == 128); // Check for the continuation flag.
+        }
+
+        return value;
+    }
+
+    public long decode(byte[] encoding, int prefixBits) {
+        return decode(new ByteArrayInputStream(encoding), prefixBits);
     }
 
     public byte[] encodeLiteralHeaderFieldWithIndexing(String name, String value) {
         byte[] nameBytes = name.getBytes(Charset.defaultCharset());
         byte[] valueBytes = value.getBytes(Charset.defaultCharset());
 
-        return ByteBuffer.allocate(3 + nameBytes.length + valueBytes.length)
-                .put((byte) 0x40)
-                .put((byte) 0x0a)
+        // TODO: Ensure the header name length fits into 1 byte.
+        // TODO: Ensure the header value length fits into 1 byte.
+
+        return ByteBuffer
+                .allocate(3 + nameBytes.length + valueBytes.length)
+                .put(LITERAL_INDEXED)
+                .put(LITERAL_NAME)
                 .put(nameBytes)
-                .put((byte) 0x0d)
+                .put((byte) valueBytes.length)
                 .put(valueBytes)
                 .array();
     }
 
-    public byte[] encodeLiteralHeaderFieldWithoutIndexing(String header, String value) {
-        throw new UnsupportedOperationException();
+    public byte[] encodeLiteralHeaderFieldWithoutIndexing(String name, String value) {
+        Integer nameIndex = headerIndex.getIndex(name);
+        byte[] valueBytes = value.getBytes(Charset.defaultCharset());
+
+        return ByteBuffer
+                .allocate(2 + valueBytes.length)
+                .put((byte) nameIndex.intValue())
+                .put((byte) valueBytes.length)
+                .put(valueBytes)
+                .array();
     }
 
-    public byte[] encodeLiteralHeaderFieldNeverIndexed(String header, String value) {
-        throw new UnsupportedOperationException();
+    public byte[] encodeLiteralHeaderFieldNeverIndexed(String name, String value) {
+        byte[] nameBytes = name.getBytes(Charset.defaultCharset());
+        byte[] valueBytes = value.getBytes(Charset.defaultCharset());
+
+        return ByteBuffer
+                .allocate(3 + nameBytes.length + valueBytes.length)
+                .put(LITERAL_NEVER_INDEXED)
+                .put((byte) nameBytes.length)
+                .put(nameBytes)
+                .put((byte) valueBytes.length)
+                .put(valueBytes)
+                .array();
     }
 
-    // encode string literal
-    // huffman encoding
-    // static table
-    // dynamic table
+    public byte[] encodeHeader(String name, String value) {
+        // TODO: Check the name and value lengths will fit in 7 bits.
 
-    static class DynamicTable {}
+        Integer index;
 
-    private Map<Integer, StaticTableValue> staticTable = new HashMap<>(64);
+        if ((index = headerIndex.getIndex(name, value)) != null) {
+            // Return the name and value index.
+            return new byte[] { (byte) index.intValue() };
+        } else if ((index = headerIndex.getIndex(name)) != null) {
+            // Return the name index, and the value encoding.
+            byte[] valueBytes = value.getBytes(Charset.defaultCharset());
 
-    static class StaticTableValue {
+            return ByteBuffer
+                    .allocate(2 + valueBytes.length)
+                    .put((byte) (64 | index))
+                    .put((byte) valueBytes.length)
+                    .put(valueBytes)
+                    .array();
+        } else {
+            // Return the name encoding, and the value encoding.
+            byte[] nameBytes = name.getBytes(Charset.defaultCharset());
+            byte[] valueBytes = value.getBytes(Charset.defaultCharset());
+            headerIndex.store(name, value);
 
-        String key;
-        String value;
+            return ByteBuffer
+                    .allocate(3 + nameBytes.length + valueBytes.length)
+                    .put((byte) 64)
+                    .put((byte) nameBytes.length)
+                    .put(nameBytes)
+                    .put((byte) valueBytes.length)
+                    .put(valueBytes)
+                    .array();
+        }
     }
-    /**
-     * Static table
-     *
-     *
-     | 1     | :authority                  |               |
-     | 2     | :method                     | GET           |
-     | 3     | :method                     | POST          |
-     | 4     | :path                       | /             |
-     | 5     | :path                       | /index.html   |
-     | 6     | :scheme                     | http          |
-     | 7     | :scheme                     | https         |
-     | 8     | :status                     | 200           |
-     | 9     | :status                     | 204           |
-     | 10    | :status                     | 206           |
-     | 11    | :status                     | 304           |
-     | 12    | :status                     | 400           |
-     | 13    | :status                     | 404           |
-     | 14    | :status                     | 500           |
-     | 15    | accept-charset              |               |
-     | 16    | accept-encoding             | gzip, deflate |
-     | 17    | accept-language             |               |
-     | 18    | accept-ranges               |               |
-     | 19    | accept                      |               |
-     | 20    | access-control-allow-origin |               |
-     | 21    | age                         |               |
-     | 22    | allow                       |               |
-     | 23    | authorization               |               |
-     | 24    | cache-control               |               |
-     | 25    | content-disposition         |               |
-     | 26    | content-encoding            |               |
-     | 27    | content-language            |               |
-     | 28    | content-length              |               |
-     | 29    | content-location            |               |
-     | 30    | content-range               |               |
-     | 31    | content-type                |               |
-     | 32    | cookie                      |               |
-     | 33    | date                        |               |
-     | 34    | etag                        |               |
-     | 35    | expect                      |               |
-     | 36    | expires                     |               |
-     | 37    | from                        |               |
-     | 38    | host                        |               |
-     | 39    | if-match                    |               |
-     | 40    | if-modified-since           |               |
-     | 41    | if-none-match               |               |
-     | 42    | if-range                    |               |
-     | 43    | if-unmodified-since         |               |
-     | 44    | last-modified               |               |
-     | 45    | link                        |               |
-     | 46    | location                    |               |
-     | 47    | max-forwards                |               |
-     | 48    | proxy-authenticate          |               |
-     | 49    | proxy-authorization         |               |
-     | 50    | range                       |               |
-     | 51    | referer                     |               |
-     | 52    | refresh                     |               |
-     | 53    | retry-after                 |               |
-     | 54    | server                      |               |
-     | 55    | set-cookie                  |               |
-     | 56    | strict-transport-security   |               |
-     | 57    | transfer-encoding           |               |
-     | 58    | user-agent                  |               |
-     | 59    | vary                        |               |
-     | 60    | via                         |               |
-     | 61    | www-authenticate            |               |
-     */
+
+    public byte[] encodeHeaderList(Map<String, String> headerList) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            for (Map.Entry<String, String> entry : headerList.entrySet()) {
+                byte[] encodedHeader = encodeHeader(entry.getKey(), entry.getValue());
+                baos.write(encodedHeader);
+            }
+            return baos.toByteArray();
+        } catch (IOException e) {
+            throw new RuntimeException("Unhandled exception!", e);
+        }
+    }
 }
