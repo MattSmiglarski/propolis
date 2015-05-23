@@ -8,6 +8,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class Hpack {
@@ -19,6 +20,15 @@ public class Hpack {
     public static final byte LITERAL_NAME = (byte) 0x0a;
 
     private HeaderIndex headerIndex = new HeaderIndex();
+    private boolean huffmanEncoding;
+
+    public Hpack() {
+        this(false);
+    }
+
+    public Hpack(boolean huffmanEncoding) {
+        this.setHuffmanEncoding(huffmanEncoding);
+    }
 
     /**
      * Byte encode a number.
@@ -156,10 +166,11 @@ public class Hpack {
 
         if ((index = headerIndex.getIndex(name, value)) != null) {
             // Return the name and value index.
-            return new byte[] { (byte) index.intValue() };
+            return new byte[] { (byte) (128 | index) };
         } else if ((index = headerIndex.getIndex(name)) != null) {
             // Return the name index, and the value encoding.
             byte[] valueBytes = value.getBytes(Charset.defaultCharset());
+            headerIndex.store(name, value);
 
             return ByteBuffer
                     .allocate(2 + valueBytes.length)
@@ -184,7 +195,7 @@ public class Hpack {
         }
     }
 
-    public byte[] encodeHeaderList(Map<String, String> headerList) {
+    public byte[] encodeHeaderList(LinkedHashMap<String, String> headerList) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             for (Map.Entry<String, String> entry : headerList.entrySet()) {
                 byte[] encodedHeader = encodeHeader(entry.getKey(), entry.getValue());
@@ -194,5 +205,9 @@ public class Hpack {
         } catch (IOException e) {
             throw new RuntimeException("Unhandled exception!", e);
         }
+    }
+
+    public void setHuffmanEncoding(boolean huffmanEncoding) {
+        this.huffmanEncoding = huffmanEncoding;
     }
 }

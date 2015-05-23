@@ -17,15 +17,15 @@ public class HeaderIndex {
             new HeaderEntry(":method", "POST"),
             new HeaderEntry(":path", "/"),
             new HeaderEntry(":path", "/index.html"),
-            new HeaderEntry("scheme", "http"),
-            new HeaderEntry("scheme", "http"),
-            new HeaderEntry("status", "200"),
-            new HeaderEntry("status", "204"),
-            new HeaderEntry("status", "206"),
-            new HeaderEntry("status", "304"),
-            new HeaderEntry("status", "400"),
-            new HeaderEntry("status", "404"),
-            new HeaderEntry("status", "500"),
+            new HeaderEntry(":scheme", "http"),
+            new HeaderEntry(":scheme", "https"),
+            new HeaderEntry(":status", "200"),
+            new HeaderEntry(":status", "204"),
+            new HeaderEntry(":status", "206"),
+            new HeaderEntry(":status", "304"),
+            new HeaderEntry(":status", "400"),
+            new HeaderEntry(":status", "404"),
+            new HeaderEntry(":status", "500"),
             new HeaderEntry("accept-charset"),
             new HeaderEntry("accept-encoding", "gzip, deflate"),
             new HeaderEntry("accept-language"),
@@ -99,10 +99,17 @@ public class HeaderIndex {
             boolean nameCondition = (this.name == null && that.name == null) ||
                     (this.name != null && this.name.equals(that.name));
 
+            if (!nameCondition) return false;
+
             boolean valueCondition = (this.value == null && that.value == null) ||
                     (this.value != null && this.value.equals(that.value));
 
-            return nameCondition && valueCondition;
+            return valueCondition;
+        }
+
+        @Override
+        public int hashCode() {
+            return name.hashCode() + value.hashCode();
         }
     }
 
@@ -126,18 +133,6 @@ public class HeaderIndex {
         return null;
     }
 
-    public void store(String name) {
-        store(name, null);
-    }
-
-    public void store(String name, String value) {
-        if (name == null) {
-            throw new NullPointerException("Missing header name!");
-        }
-
-        dynamicTable.add(0, new HeaderEntry(name, value));
-    }
-
     public Integer getIndex(String name) {
         if (name == null) {
             throw new NullPointerException("Missing header name!");
@@ -156,5 +151,17 @@ public class HeaderIndex {
         }
 
         return null;
+    }
+
+    public void store(String name, String value) {
+        if (name == null) {
+            throw new NullPointerException("Missing header name!");
+        }
+
+        dynamicTable.add(0, new HeaderEntry(name, value));
+    }
+
+    public void store(String name) {
+        store(name, null);
     }
 }
