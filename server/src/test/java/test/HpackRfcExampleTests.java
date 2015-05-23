@@ -4,6 +4,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import propolis.server.Hpack;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 
@@ -19,7 +20,8 @@ import java.util.LinkedHashMap;
  */
 public class HpackRfcExampleTests {
 
-    private Hpack hpack = new Hpack();
+    private Hpack encodingContext = new Hpack();
+    private Hpack decodingContext = new Hpack();
 
     /**
      * C.1.1.  Example 1: Encoding 10 Using a 5-Bit Prefix
@@ -55,7 +57,7 @@ public class HpackRfcExampleTests {
                 0x74,0x6f, 0x6d,0x2d, 0x68,0x65, 0x61,0x64,  0x65,0x72
         };
 
-        byte[] actual = hpack.encodeLiteralHeaderFieldWithIndexing("custom-key", "custom-header");
+        byte[] actual = encodingContext.encodeHeader("custom-key", "custom-header");
         Assert.assertArrayEquals(expected, actual);
 
         // TODO: Assert the key/value is indexed.
@@ -70,7 +72,7 @@ public class HpackRfcExampleTests {
                 0x04,0x0c, 0x2f,0x73, 0x61,0x6d, 0x70,0x6c,  0x65,0x2f, 0x70,0x61, 0x74,0x68
         };
 
-        byte[] actual = hpack.encodeLiteralHeaderFieldWithoutIndexing(":path", "/sample/path");
+        byte[] actual = encodingContext.encodeLiteralHeaderFieldWithoutIndexing(":path", "/sample/path");
         Assert.assertArrayEquals(expected, actual);
 
         // TODO: Assert the key/value is not indexed.
@@ -86,7 +88,7 @@ public class HpackRfcExampleTests {
                 0x74
         };
 
-        byte[] actual = hpack.encodeLiteralHeaderFieldNeverIndexed("password", "secret");
+        byte[] actual = encodingContext.encodeLiteralHeaderFieldNeverIndexed("password", "secret");
         Assert.assertArrayEquals(expected, actual);
     }
 
@@ -96,7 +98,6 @@ public class HpackRfcExampleTests {
     @Test
     public void shouldEncodeHeaderListWithoutHuffmanEncoding() {
 
-        // TODO: stop adding the huffman bit flag when the value is not huffman encoded.
         // C.3.1. First Request
         LinkedHashMap<String, String> firstHeaders = new LinkedHashMap<>();
         firstHeaders.put(":method", "GET");
@@ -104,10 +105,10 @@ public class HpackRfcExampleTests {
         firstHeaders.put(":path", "/");
         firstHeaders.put(":authority", "www.example.com");
 
-        assertHpackEncodingEquals(new int[]{
+        assertHpackEncodingEquals(new int[] {
                 0x82, 0x86, 0x84, 0x41, 0x0f, 0x77, 0x77, 0x77, 0x2e, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65,
                 0x2e, 0x63, 0x6f, 0x6d
-        }, firstHeaders, hpack);
+        }, firstHeaders, encodingContext, decodingContext);
 
         /**
          * C.3.2.  Second Request
@@ -119,9 +120,9 @@ public class HpackRfcExampleTests {
         secondHeaders.put(":authority", "www.example.com");
         secondHeaders.put("cache-control", "no-cache");
 
-        assertHpackEncodingEquals(new int[] {
+         assertHpackEncodingEquals(new int[] {
                 0x82,0x86, 0x84,0xbe, 0x58,0x08, 0x6e,0x6f,  0x2d,0x63, 0x61,0x63, 0x68,0x65
-        }, secondHeaders, hpack);
+        }, secondHeaders, encodingContext, decodingContext);
 
         /**
          * C.3.3.  Third Request
@@ -136,7 +137,7 @@ public class HpackRfcExampleTests {
         assertHpackEncodingEquals(new int[] {
                 0x82,0x87, 0x85,0xbf, 0x40,0x0a, 0x63,0x75,  0x73,0x74, 0x6f,0x6d, 0x2d,0x6b, 0x65,0x79,
                 0x0c,0x63, 0x75,0x73, 0x74,0x6f, 0x6d,0x2d,  0x76,0x61, 0x6c,0x75, 0x65
-        }, thirdHeaders, hpack);
+        }, thirdHeaders, encodingContext, decodingContext);
     }
 
     /**
@@ -147,7 +148,7 @@ public class HpackRfcExampleTests {
     @Test
     public void shouldEncodeHeaderListWithHuffmanEncoding() {
 
-        hpack.setHuffmanEncoding(true);
+        encodingContext.setHuffmanEncoding(true);
 
         /**
          * C.4.1. First Request
@@ -161,7 +162,7 @@ public class HpackRfcExampleTests {
         assertHpackEncodingEquals(new int[] {
                 0x82,0x86, 0x84,0x41, 0x8c,0xf1, 0xe3,0xc2,  0xe5,0xf2, 0x3a,0x6b, 0xa0,0xab, 0x90,0xf4,
                 0xff
-        }, firstHeaders, hpack);
+        }, firstHeaders, encodingContext, decodingContext);
 
         /**
          * C.4.2.  Second Request
@@ -175,7 +176,7 @@ public class HpackRfcExampleTests {
 
         assertHpackEncodingEquals(new int[] {
                0x82,0x86,0x84,0xbe, 0x58,0x86,0xa8,0xeb, 0x10, 0x64,0x9c,0xbf
-        }, secondHeaders, hpack);
+        }, secondHeaders, encodingContext, decodingContext);
 
         /**
          * C.4.3.  Third Request
@@ -190,7 +191,7 @@ public class HpackRfcExampleTests {
         assertHpackEncodingEquals(new int[] {
                0x82,0x87,0x85,0xbf, 0x40,0x88, 0x25,0xa8, 0x49,0xe9, 0x5b,0xa9, 0x7d, 0x7f,0x89, 0x25,
                0xa8, 0x49,0xe9, 0x5b,0xb8,0xe8,0xb4,0xbf
-        }, thirdHeaders, hpack);
+        }, thirdHeaders, encodingContext, decodingContext);
     }
 
 
@@ -215,7 +216,7 @@ public class HpackRfcExampleTests {
                 0x20,0x32 ,0x30,0x3a ,0x31,0x33 ,0x3a,0x32  ,0x31,0x20 ,0x47,0x4d ,0x54,0x6e ,0x17,0x68, //  20:13:21 GMTn.h
                 0x74,0x74 ,0x70,0x73 ,0x3a,0x2f ,0x2f,0x77  ,0x77,0x77 ,0x2e,0x65 ,0x78,0x61 ,0x6d,0x70, // ttps://www.examp
                 0x6c,0x65 ,0x2e,0x63 ,0x6f,0x6d                                                          // le.com
-        }, firstHeaders, hpack);
+        }, firstHeaders, encodingContext, decodingContext);
 
         /**
          * C.5.2.  Second Response
@@ -228,7 +229,7 @@ public class HpackRfcExampleTests {
 
         assertHpackEncodingEquals(new int[] {
                 0x48,0x03 ,0x33,0x30 ,0x37,0xc1 ,0xc0,0xbf                     // H.307...
-        }, secondHeaders, hpack);
+        }, secondHeaders, encodingContext, decodingContext);
 
         /**
          * C.5.3.  Third Response
@@ -249,7 +250,7 @@ public class HpackRfcExampleTests {
                 0x55,0x41 ,0x58,0x51 ,0x57,0x45 ,0x4f,0x49 ,0x55,0x3b ,0x20,0x6d ,0x61,0x78 ,0x2d,0x61, // UAXQWEOIU; max-a
                 0x67,0x65 ,0x3d,0x33 ,0x36,0x30 ,0x30,0x3b ,0x20,0x76 ,0x65,0x72 ,0x73,0x69 ,0x6f,0x6e, // ge=3600; version
                 0x3d,0x31                                                                               // =1
-        }, thirdHeaders, hpack);
+        }, thirdHeaders, encodingContext, decodingContext);
     }
 
 
@@ -259,7 +260,7 @@ public class HpackRfcExampleTests {
     @Test
     public void shouldEncodeResponseHeadersWithHuffmanEncoding() {
 
-        hpack.setHuffmanEncoding(true);
+        encodingContext.setHuffmanEncoding(true);
 
         /**
          * C.6.1.  First Response
@@ -275,7 +276,7 @@ public class HpackRfcExampleTests {
                 0x94,0x10 ,0x54,0xd4 ,0x44,0xa8 ,0x20,0x05 ,0x95,0x04 ,0x0b,0x81 ,0x66,0xe0 ,0x82,0xa6, // ..T.D. .....f...
                 0x2d,0x1b ,0xff,0x6e ,0x91,0x9d ,0x29,0xad ,0x17,0x18 ,0x63,0xc7 ,0x8f,0x0b ,0x97,0xc8, // -..n..)...c.....
                 0xe9,0xae ,0x82,0xae ,0x43,0xd3                                                         // ....C.
-        }, firstHeaders, hpack);
+        }, firstHeaders, encodingContext, decodingContext);
 
         /**
          * C.6.2.  Second Response
@@ -288,7 +289,7 @@ public class HpackRfcExampleTests {
 
         assertHpackEncodingEquals(new int[]{
                 0x48, 0x83, 0x64, 0x0e, 0xff, 0xc1, 0xc0, 0xbf                     // H.d.....
-        }, secondHeaders, hpack);
+        }, secondHeaders, encodingContext, decodingContext);
 
         /**
          * C.6.3.  Third Response
@@ -307,7 +308,7 @@ public class HpackRfcExampleTests {
                 0x77,0xad ,0x94,0xe7 ,0x82,0x1d ,0xd7,0xf2 ,0xe6,0xc7 ,0xb3,0x35 ,0xdf,0xdf ,0xcd,0x5b, // w..........5...[
                 0x39,0x60 ,0xd5,0xaf ,0x27,0x08 ,0x7f,0x36 ,0x72,0xc1 ,0xab,0x27 ,0x0f,0xb5 ,0x29,0x1f, // 9`..'..6r..'..).
                 0x95,0x87 ,0x31,0x60 ,0x65,0xc0 ,0x03,0xed ,0x4e,0xe5 ,0xb1,0x06 ,0x3d,0x50 ,0x07       // ..1`e...N...=P.
-        }, thirdHeaders, hpack);
+        }, thirdHeaders, encodingContext, decodingContext);
     }
 
     /**
@@ -331,17 +332,25 @@ public class HpackRfcExampleTests {
      * To improve readibility in these tests it makes sense to first create an integer array and then convert it.
      *
      * @param expectedInts The expected byte representation (expressed as an integer array for readibility.)
-     * @param headers The headers for the test case (as a LinkedHashMap, since ordering matters).
-     * @param hpack The current hpack instance, to provide the context for the encoding.
+     * @param expectedHeaders The headers for the test case (as a LinkedHashMap, since ordering matters).
+     * @param encodingContext A Hpack instance, to provide the context for the encoding.
+     * @param decodingContext Another Hpack instance, to provide the context for the decoding.
      */
-    public static void assertHpackEncodingEquals(int[] expectedInts, LinkedHashMap<String, String> headers, Hpack hpack) {
+    public static void assertHpackEncodingEquals(int[] expectedInts, LinkedHashMap<String, String> expectedHeaders, Hpack encodingContext, Hpack decodingContext) {
         byte[] expected = new byte[expectedInts.length];
         for (int i=0; i<expectedInts.length; i++) {
             expected[i] = (byte) expectedInts[i];
         }
-        byte[] actual = hpack.encodeHeaderList(headers);
+        byte[] actual = encodingContext.encodeHeaderList(expectedHeaders);
         Assert.assertArrayEquals(
                 String.format("%s\n%s", Arrays.toString(expected), Arrays.toString(actual)),
                 expected, actual);
+
+        try {
+            LinkedHashMap<String, String> actualHeaders = decodingContext.decodeHeaderList(actual);
+            Assert.assertEquals(expectedHeaders, actualHeaders);
+        } catch (IOException e) {
+            throw new RuntimeException("Unhandled failure!", e);
+        }
     }
 }

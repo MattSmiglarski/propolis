@@ -75,9 +75,34 @@ public class HeaderIndex {
             new HeaderEntry("www-authenticate")
     ));
 
+    public static final int STATIC_TABLE_SIZE = 61;
+
     private final List<HeaderEntry> dynamicTable = new ArrayList<>();
 
-    private static final class HeaderEntry {
+    public HeaderEntry get(int index) {
+        if (index == 0) {
+            throw new RuntimeException("Unhandled failure!");
+        }
+
+        if (index <= STATIC_TABLE_SIZE) {
+            return staticTable.get(index - 1);
+        } else if (index <= STATIC_TABLE_SIZE + dynamicTable.size()) {
+            HeaderEntry entry = dynamicTable.get(index - STATIC_TABLE_SIZE - 1);
+
+            if (entry == null) {
+                throw new RuntimeException("Unhandled failure!");
+            }
+            return entry;
+        } else {
+            throw new RuntimeException("Unhandled failure!");
+        }
+    }
+
+    public void updateMaximumDynamicSize(int maxSize) {
+        throw new UnsupportedOperationException();
+    }
+
+    public static final class HeaderEntry {
 
         public final String name;
         public final String value;
@@ -89,6 +114,11 @@ public class HeaderIndex {
         public HeaderEntry(String name, String value) {
             this.name = name;
             this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return name + ":" + value;
         }
 
         @Override
@@ -127,7 +157,7 @@ public class HeaderIndex {
 
         int dynamicEntryIndex = dynamicTable.indexOf(headerEntry);
         if (dynamicEntryIndex >= 0) {
-            return 62 + dynamicEntryIndex;
+            return STATIC_TABLE_SIZE + dynamicEntryIndex + 1;
         }
 
         return null;
@@ -146,22 +176,26 @@ public class HeaderIndex {
 
         for (int i = 0; i < dynamicTable.size(); i++) {
             if (name.equals(dynamicTable.get(i).name)) {
-                return 62 + i;
+                return STATIC_TABLE_SIZE + 1 + i;
             }
         }
 
         return null;
     }
 
-    public void store(String name, String value) {
-        if (name == null) {
+    public void store(HeaderEntry entry) {
+        if (entry.name == null) {
             throw new NullPointerException("Missing header name!");
         }
 
-        dynamicTable.add(0, new HeaderEntry(name, value));
+        dynamicTable.add(0, entry);
+    }
+
+    public void store(String name, String value) {
+        store(new HeaderEntry(name, value));
     }
 
     public void store(String name) {
-        store(name, null);
+        store(new HeaderEntry(name));
     }
 }

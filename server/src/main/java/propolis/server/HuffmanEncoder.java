@@ -47,19 +47,29 @@ public class HuffmanEncoder {
             byte hold = 0x00;
             int byteCursor = 0;
             int bitCursor = 0;
-            while (byteCursor < data.length) {
+            boolean terminator = false;
+
+            while (byteCursor < data.length || bitCursor > 0) { // Ensure that the bitCursor isn't in the middle of an iteration.
                 BinaryTreeValue value = decodingTree;
 
                 while (!value.isLeaf()) {
                     if (bitCursor % 8 == 0) {
                         bitCursor = 0;
-                        hold = data[byteCursor++];
+                        if (byteCursor < data.length) {
+                            hold = data[byteCursor++];
+                        } else {
+                            // TODO: Assert that the padding contains solely 1s.
+                            terminator = true;
+                            break;
+                        }
                     }
                     boolean bitIsZero = (hold & ((1 << (7 - bitCursor++)))) == 0;
                     value = bitIsZero ? value.left : value.right;
                 }
 
-                baos.write(decodingTable.get(value.entry.representation));
+                if (!terminator) {
+                    baos.write(decodingTable.get(value.entry.representation));
+                }
             }
 
             baos.flush();

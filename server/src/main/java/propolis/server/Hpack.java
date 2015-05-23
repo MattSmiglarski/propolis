@@ -6,18 +6,20 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * TODO: Separate encoding from decoding.
+ */
 public class Hpack {
 
     private static Logger log = LoggerFactory.getLogger(Hpack.class);
 
     public static final byte LITERAL_NEVER_INDEXED = (byte) 0x10;
-    public static final byte LITERAL_INDEXED = (byte) 0x40;
-    public static final byte LITERAL_NAME = (byte) 0x0a;
 
     private HeaderIndex headerIndex = new HeaderIndex();
     private boolean huffmanEncoding;
@@ -124,31 +126,6 @@ public class Hpack {
         }
     }
 
-    public byte[] encodeLiteralHeaderFieldWithIndexing(String name, String value) {
-
-        byte[] nameBytes;
-        byte[] valueBytes;
-        if (huffmanEncoding) {
-            nameBytes = huffmanEncodedLiteral(name);
-            valueBytes = huffmanEncodedLiteral(value);
-        } else {
-            nameBytes = name.getBytes(Charset.defaultCharset());
-            valueBytes = value.getBytes(Charset.defaultCharset());
-        }
-
-        // TODO: Ensure the header name length fits into 1 byte.
-        // TODO: Ensure the header value length fits into 1 byte.
-
-        return ByteBuffer
-                .allocate(3 + nameBytes.length + valueBytes.length)
-                .put(LITERAL_INDEXED)
-                .put(LITERAL_NAME)
-                .put(nameBytes)
-                .put((byte) valueBytes.length)
-                .put(valueBytes)
-                .array();
-    }
-
     public byte[] encodeLiteralHeaderFieldWithoutIndexing(String name, String value) {
         Integer nameIndex = headerIndex.getIndex(name);
         byte[] valueBytes = value.getBytes(Charset.defaultCharset());
@@ -240,7 +217,7 @@ public class Hpack {
     public byte[] encodeHeaderList(LinkedHashMap<String, String> headerList) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             for (Map.Entry<String, String> entry : headerList.entrySet()) {
-                byte[] encodedHeader = encodeHeader(entry.getKey(), entry.getValue());
+                 byte[] encodedHeader = encodeHeader(entry.getKey(), entry.getValue());
                 baos.write(encodedHeader);
             }
             return baos.toByteArray();
@@ -249,6 +226,120 @@ public class Hpack {
         }
     }
 
+    public HeaderIndex.HeaderEntry decodeHeader(InputStream input) throws IOException {
+
+        int b = input.read();
+
+        if ((b & 0b1000_0000) != 0) { // First bit.
+            /*
+             * [HPACK] 6.1.  Indexed Header Field Representation
+             */
+
+            int index = 0b0111_1111 & b;
+            return headerIndex.get(index);
+
+        } else if ((b & 0b0100_0000) != 0) { // Second bit.
+            /*
+             * 6.2.1.  Literal Header Field with Incremental Indexing
+             */
+
+            int index = 0b0011_1111 & b;
+            String headerName;
+            if (index == 0) {
+                headerName = decodeLiteral(input);
+            } else {
+                headerName = headerIndex.get(index).name;
+            }
+            String headerValue = decodeLiteral(input);
+
+            HeaderIndex.HeaderEntry entry = new HeaderIndex.HeaderEntry(headerName, headerValue);
+            headerIndex.store(entry);
+            return entry;
+
+        } else if ((b & 0b0010_0000) != 0) { // Third bit.
+            /*
+             * 6.3.  Dynamic Table Size Update.
+             */
+            int maxSize = 0b0001_1111 & b;
+            headerIndex.updateMaximumDynamicSize(maxSize);
+            return null;
+
+        } else if ((b & 0b0001_0000) != 0) { // Fourth bit.
+            /*
+             * [HPACK] 6.2.3.  Literal Header Field Never Indexed
+             *
+             * This is the same as "Literal Header Field without Indexing" below, with the spec adding the qualification:
+             * "Intermediaries MUST use the same representation for encoding this header field."
+             */
+
+            int index = 0b0000_1111 & b;
+            if (index == 0) {
+                return new HeaderIndex.HeaderEntry(
+                        decodeLiteral(input),
+                        decodeLiteral(input));
+            } else {
+                return new HeaderIndex.HeaderEntry(
+                        headerIndex.get(index).name,
+                        decodeLiteral(input));
+            }
+
+        } else { // No bits.
+            /*
+             * [HPACK] 6.2.2.  Literal Header Field without Indexing
+             */
+
+            int index = 0b0000_1111 & b;
+            if (index == 0) {
+                return new HeaderIndex.HeaderEntry(
+                        decodeLiteral(input),
+                        decodeLiteral(input)
+                );
+            } else {
+                return new HeaderIndex.HeaderEntry(
+                        headerIndex.get(index).name,
+                        decodeLiteral(input)
+                );
+            }
+        }
+    }
+
+    /**
+     * String decode a Huffman flagged length byte, followed by the (potentially Huffman encoded) value of that length.
+     *
+     *    +---+---+-----------------------+
+     *    | H |     Value Length (7+)     |
+     *    +---+---------------------------+
+     *
+     * @param input The input stream, containing sufficient bytes to read off the value.
+     * @return The value as a Java String.
+     * @throws IOException Upon error reading from the underlying stream.
+     */
+    private String decodeLiteral(InputStream input) throws IOException {
+        int b = input.read();
+        boolean huffmanEncoded = (0b1000_0000 & b) != 0;
+        int length = 0b0111_1111 & b;
+        byte[] value = new byte[length];
+        input.read(value);
+        byte[] bytes = huffmanEncoded ? HuffmanEncoder.decode(value) : value;
+        return new String(bytes);
+    }
+
+    public LinkedHashMap<String, String> decodeHeaderList(byte[] encodedHeaders) throws IOException {
+        ByteArrayInputStream input = new ByteArrayInputStream(encodedHeaders);
+        LinkedHashMap<String, String> headers = new LinkedHashMap<>();
+        while (input.available() > 0) {
+            HeaderIndex.HeaderEntry header = decodeHeader(input);
+            headers.put(header.name, header.value);
+        }
+        return headers;
+    }
+
+    /**
+     * Flag used when encoding, to decide whether to apply Huffman encoding to literals.
+     * NB: This is not used when decoding.
+     *
+     * @param huffmanEncoding
+     */
     public void setHuffmanEncoding(boolean huffmanEncoding) {
         this.huffmanEncoding = huffmanEncoding;
     }
