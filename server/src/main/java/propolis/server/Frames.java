@@ -3,13 +3,12 @@ package propolis.server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.swing.*;
-import java.io.DataOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public abstract class Frames {
@@ -67,7 +66,7 @@ public abstract class Frames {
 
         int streamId;
         int padLength;
-        Map<String, String> headers;
+        LinkedHashMap<String, String> headers = new LinkedHashMap<>();
         boolean exclusive;
         int streamDependency;
         int weight;
@@ -79,7 +78,35 @@ public abstract class Frames {
 
         @Override
         public HttpFrame asHttpFrame() {
-            throw new UnsupportedOperationException();
+            int flags = (flagEndStream? 0x1 : 0)
+                    | (flagEndHeaders? 0x4 : 0)
+                    | (flagPadded? 0x8 : 0)
+                    | (flagPriority? 0x20 : 0);
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            Hpack hpackEncoder = new Hpack();
+            byte[] headerBlockFragment = hpackEncoder.encodeHeaderList(headers);
+
+            if (flagPadded) {
+                baos.write(padLength);
+            }
+
+            if (flagPriority) {
+                baos.write((exclusive? 127 : 0) | streamDependency >>> 24);
+                baos.write(streamDependency >>> 16);
+                baos.write(streamDependency >>> 8);
+                baos.write(streamDependency);
+                baos.write(weight);
+            }
+
+            try {
+                baos.write(headerBlockFragment);
+                baos.write(new byte[padLength]);
+            } catch (IOException e) {
+                throw new RuntimeException("Unhandled exception!", e);
+            }
+
+            return new HttpFrame(streamId, 0x1, flags, baos.toByteArray());
         }
     }
 
