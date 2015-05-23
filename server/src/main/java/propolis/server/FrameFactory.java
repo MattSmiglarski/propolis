@@ -1,9 +1,12 @@
 package propolis.server;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class FrameFactory {
@@ -60,11 +63,26 @@ public class FrameFactory {
     }
 
     public Frames.PriorityFrame createPriorityFrame(Frames.HttpFrame httpFrame) {
-        throw new UnsupportedOperationException();
+        Frames.PriorityFrame priorityFrame = new Frames.PriorityFrame();
+        priorityFrame.streamId = httpFrame.streamId;
+        priorityFrame.exclusive = (httpFrame.payload[0] & 0x8000_0000) != 0;
+        priorityFrame.streamDependency = (0x7f & httpFrame.payload[0])
+                | httpFrame.payload[1]
+                | httpFrame.payload[2]
+                | httpFrame.payload[3];
+
+        priorityFrame.weight = httpFrame.payload[4];
+        return priorityFrame;
     }
 
     public Frames.ResetFrame createResetStreamFrame(Frames.HttpFrame httpFrame) {
-        throw new UnsupportedOperationException();
+        Frames.ResetFrame resetFrame = new Frames.ResetFrame();
+        int ordinal = (httpFrame.payload[0] << 24)
+                | (httpFrame.payload[1] << 16)
+                | (httpFrame.payload[2] << 8)
+                | httpFrame.payload[3];
+        resetFrame.error = Frames.Error.values()[ordinal];
+        return resetFrame;
     }
 
     public Frames.SettingsFrame createSettingsFrame(Frames.HttpFrame httpFrame) {
@@ -87,7 +105,28 @@ public class FrameFactory {
     }
 
     public Frames.PushPromiseFrame createPushPromiseFrame(Frames.HttpFrame httpFrame) {
-        throw new UnsupportedOperationException();
+
+        Frames.PushPromiseFrame pushPromiseFrame = new Frames.PushPromiseFrame();
+        pushPromiseFrame.flagPadded = (httpFrame.flags & 0x8) != 0;
+        pushPromiseFrame.flagEndHeaders = (httpFrame.flags & 0x4) != 0;
+
+        ByteBuffer byteBuffer = ByteBuffer.wrap(httpFrame.payload);
+        if (pushPromiseFrame.flagPadded) {
+            pushPromiseFrame.padLength = byteBuffer.get();
+        }
+
+        pushPromiseFrame.promisedStreamId = 0x7fffffff & byteBuffer.getInt();
+        int headerBlockFragmentLength = httpFrame.payload.length - byteBuffer.position() - pushPromiseFrame.padLength;
+        byte[] headerBlockFragment = new byte[headerBlockFragmentLength];
+        byteBuffer.get(headerBlockFragment);
+        try {
+            // TODO: Use a Hpack decoding context scoped to the stream.
+            pushPromiseFrame.headers = new Hpack().decodeHeaderList(headerBlockFragment);
+        } catch (IOException e) {
+            throw new RuntimeException("Unhandled failuer!", e);
+        }
+
+        return pushPromiseFrame;
     }
 
     public Frames.PingFrame createPingFrame(Frames.HttpFrame httpFrame) {
@@ -98,14 +137,30 @@ public class FrameFactory {
     }
 
     public Frames.GoAwayFrame createGoAwayFrame(Frames.HttpFrame httpFrame) {
-        throw new UnsupportedOperationException();
+        Frames.GoAwayFrame goAwayFrame = new Frames.GoAwayFrame();
+        ByteBuffer byteBuffer = ByteBuffer.wrap(httpFrame.payload);
+        goAwayFrame.lastStreamId = byteBuffer.getInt() & 0x7fffffff;
+        goAwayFrame.error = Frames.Error.values()[byteBuffer.getInt()];
+        goAwayFrame.data = new byte[httpFrame.payload.length - 8];
+        byteBuffer.get(goAwayFrame.data);
+        return goAwayFrame;
     }
 
     public Frames.WindowUpdateFrame createWindowUpdateFrame(Frames.HttpFrame httpFrame) {
-        throw new UnsupportedOperationException();
+        Frames.WindowUpdateFrame windowUpdateFrame = new Frames.WindowUpdateFrame();
+        windowUpdateFrame.streamId = httpFrame.streamId;
+        windowUpdateFrame.canTransmit = ByteBuffer.wrap(httpFrame.payload).getInt();
+        return windowUpdateFrame;
     }
 
     public Frames.ContinuationFrame createContinuationFrame(Frames.HttpFrame httpFrame) {
-        throw new UnsupportedOperationException();
+        Frames.ContinuationFrame continuationFrame = new Frames.ContinuationFrame();
+        try {
+            // TODO: Reuse the decoding context.
+            continuationFrame.headers = new Hpack().decodeHeaderList(httpFrame.payload);
+        } catch (IOException e) {
+            throw new RuntimeException("Unhandled failure!", e);
+        }
+        return continuationFrame;
     }
 }

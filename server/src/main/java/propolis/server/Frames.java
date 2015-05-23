@@ -37,12 +37,12 @@ public abstract class Frames {
 
     public static class DataFrame implements Frame {
 
-        int streamId;
-        int padLength;
-        byte[] data;
+        public int streamId;
+        public int padLength;
+        public byte[] data;
 
-        boolean flagEndStream;
-        boolean flagPadded;
+        public boolean flagEndStream;
+        public boolean flagPadded;
 
         @Override
         public HttpFrame asHttpFrame() {
@@ -64,17 +64,17 @@ public abstract class Frames {
 
     public static class HeadersFrame implements Frame {
 
-        int streamId;
-        int padLength;
-        LinkedHashMap<String, String> headers = new LinkedHashMap<>();
-        boolean exclusive;
-        int streamDependency;
-        int weight;
+        public int streamId;
+        public int padLength;
+        public LinkedHashMap<String, String> headers = new LinkedHashMap<>();
+        public boolean exclusive;
+        public int streamDependency;
+        public int weight;
 
-        boolean flagEndStream;
-        boolean flagEndHeaders;
-        boolean flagPadded;
-        boolean flagPriority;
+        public boolean flagEndStream;
+        public boolean flagEndHeaders;
+        public boolean flagPadded;
+        public boolean flagPriority;
 
         @Override
         public HttpFrame asHttpFrame() {
@@ -112,31 +112,37 @@ public abstract class Frames {
 
     public static class PriorityFrame implements Frame {
 
-        int streamId;
-        boolean exclusive;
-        int streamDependency;
-        int weight;
+        public int streamId;
+        public boolean exclusive;
+        public int streamDependency;
+        public int weight;
 
         @Override
         public HttpFrame asHttpFrame() {
-            throw new UnsupportedOperationException();
+            int flags = 0;
+            return new HttpFrame(streamId, 0x2, flags, ByteBuffer.allocate(5)
+                    .putInt((exclusive? (1 << 31) : 0) | streamDependency)
+                    .put((byte) weight)
+                    .array()
+            );
         }
     }
 
     public static class ResetFrame implements Frame {
 
-        int streamId;
-        Error error;
+        public int streamId;
+        public Error error;
 
         @Override
         public HttpFrame asHttpFrame() {
-            throw new UnsupportedOperationException();
+            int flags = 0;
+            return new HttpFrame(streamId, 0x3, flags, ByteBuffer.allocate(4).putInt(error.ordinal()).array());
         }
     }
 
     public static class SettingsFrame implements Frame {
 
-        int streamId;
+        public int streamId;
         public boolean ack;
         public final Map<Setting, Integer> settings;
 
@@ -181,28 +187,39 @@ public abstract class Frames {
 
     public static class PushPromiseFrame implements Frame {
 
-        int streamId;
-        int padLength;
-        boolean reserved;
-        int promisedStreamId;
-        Map<String, String> headers;
-        boolean flagEndHeaders;
-        boolean flagPadded;
-
-
-        public void writePayload(ByteBuffer buffer) {
-            // TODO: Do padding, as required.
-            byte b = buffer.get();
-            int streamId = b >> 1;
-        }
+        public int streamId;
+        public int padLength;
+        public boolean reserved;
+        public int promisedStreamId;
+        public Map<String, String> headers;
+        public boolean flagEndHeaders;
+        public boolean flagPadded;
 
         @Override
         public HttpFrame asHttpFrame() {
-            throw new UnsupportedOperationException();
+            int flags = (flagEndHeaders? 0x4 : 0)
+                    | (flagPadded? 0x8 : 0);
+
+            byte[] headerBlockFragment = new byte[0];
+            int payloadLength = (flagPadded? padLength : 0)
+                    + 4 + headerBlockFragment.length + padLength;
+
+            ByteBuffer payloadBuffer = ByteBuffer.allocate(payloadLength);
+
+            if (flagPadded) {
+                payloadBuffer.put((byte) padLength);
+            }
+
+            byte[] payload = payloadBuffer
+                    .putInt(promisedStreamId)
+                    .put(headerBlockFragment)
+                    .array();
+
+            return new HttpFrame(streamId, 0x5, flags, payload);
         }
     }
 
-    public static class PingFrame implements Frame {
+    public static class  PingFrame implements Frame {
 
         public byte[] data;
         public boolean ack;
@@ -249,50 +266,48 @@ public abstract class Frames {
 
     public static class GoAwayFrame implements Frame {
 
-        int lastStreamId;
+        public int lastStreamId;
         public Error error;
-        byte[] data;
-
-        public void writePayload(ByteBuffer buffer) {
-            buffer.putInt(lastStreamId);
-            buffer.putInt(error.ordinal());
-            buffer.put(data);
-        }
-
-        public void read(byte[] payloadData) {
-            ByteBuffer payload = ByteBuffer.wrap(payloadData);
-            lastStreamId = payload.getInt();
-            error = errors[payload.getInt()];
-            data = new byte[payload.limit() - payload.position()];
-            payload.get(data);
-        }
+        public byte[] data;
 
         @Override
         public HttpFrame asHttpFrame() {
-            throw new UnsupportedOperationException();
+            int flags = 0;
+            byte[] payload = ByteBuffer.allocate(8 + data.length)
+                    .putInt(0x80000000 | lastStreamId)
+                    .putInt(error.ordinal())
+                    .put(data)
+                    .array();
+            return new HttpFrame(0, 0x7, flags, payload);
         }
     }
 
     public static class WindowUpdateFrame implements Frame {
 
-        int streamId;
-        int canTransmit;
+        public int streamId;
+        public int canTransmit;
 
         @Override
         public HttpFrame asHttpFrame() {
-            throw new UnsupportedOperationException();
+            int flags = 0;
+            byte[] payload = ByteBuffer.allocate(4).putInt(canTransmit).array();
+            return new HttpFrame(streamId, 0x8, flags, payload);
         }
     }
 
     public static class ContinuationFrame implements Frame {
 
-        int streamId;
-        Map<String, String> headers;
-        boolean flagEndHeaders;
+        public int streamId;
+        public LinkedHashMap<String, String> headers;
+        public boolean flagEndHeaders;
+
+        // TODO: Reuse the context.
 
         @Override
         public HttpFrame asHttpFrame() {
-            throw new UnsupportedOperationException();
+            int flags = flagEndHeaders? 0x4 : 0;
+            byte[] payload = new Hpack().encodeHeaderList(headers);
+            return new HttpFrame(streamId, 0x9, flags, payload);
         }
     }
 
