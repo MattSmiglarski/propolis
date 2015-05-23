@@ -67,6 +67,13 @@ public class HuffmanEncoder {
         }
     }
 
+    public byte[] encode(byte[] bytes) throws IOException {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            encode(bytes, baos);
+            return baos.toByteArray();
+        }
+    }
+
     public void encode(byte[] bytes, OutputStream os) throws IOException {
         byte bitBuffer = 0x00;
         int holdOffset = 0;

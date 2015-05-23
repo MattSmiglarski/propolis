@@ -31,7 +31,6 @@ public class HuffmanTests {
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         huffmanEncoder.encode(testBytes, baos);
-        baos.flush();
         byte[] encoding = baos.toByteArray();
         baos.close();
         byte[] decoded = huffmanEncoder.decode(encoding);
