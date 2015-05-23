@@ -96,6 +96,7 @@ public class HpackRfcExampleTests {
     @Test
     public void shouldEncodeHeaderListWithoutHuffmanEncoding() {
 
+        // TODO: stop adding the huffman bit flag when the value is not huffman encoded.
         // C.3.1. First Request
         LinkedHashMap<String, String> firstHeaders = new LinkedHashMap<>();
         firstHeaders.put(":method", "GET");
@@ -157,7 +158,7 @@ public class HpackRfcExampleTests {
         firstHeaders.put(":path", "/");
         firstHeaders.put(":authority", "www.example.com");
 
-        assertHpackEncodingEquals(new int[]{
+        assertHpackEncodingEquals(new int[] {
                 0x82,0x86, 0x84,0x41, 0x8c,0xf1, 0xe3,0xc2,  0xe5,0xf2, 0x3a,0x6b, 0xa0,0xab, 0x90,0xf4,
                 0xff
         }, firstHeaders, hpack);
@@ -172,7 +173,7 @@ public class HpackRfcExampleTests {
         secondHeaders.put(":authority", "www.example.com");
         secondHeaders.put("cache-control", "no-cache");
 
-        assertHpackEncodingEquals(new int[]{
+        assertHpackEncodingEquals(new int[] {
                0x82,0x86,0x84,0xbe, 0x58,0x86,0xa8,0xeb, 0x10, 0x64,0x9c,0xbf
         }, secondHeaders, hpack);
 
@@ -220,10 +221,10 @@ public class HpackRfcExampleTests {
          * C.5.2.  Second Response
          */
         LinkedHashMap<String, String> secondHeaders = new LinkedHashMap<>();
-        firstHeaders.put(":status", "307");
-        firstHeaders.put("cache-control", "private");
-        firstHeaders.put("date", "Mon, 21 Oct 2013 20:13:21 GMT");
-        firstHeaders.put("location", "https://www.example.com");
+        secondHeaders.put(":status", "307");
+        secondHeaders.put("cache-control", "private");
+        secondHeaders.put("date", "Mon, 21 Oct 2013 20:13:21 GMT");
+        secondHeaders.put("location", "https://www.example.com");
 
         assertHpackEncodingEquals(new int[] {
                 0x48,0x03 ,0x33,0x30 ,0x37,0xc1 ,0xc0,0xbf                     // H.307...
@@ -257,6 +258,8 @@ public class HpackRfcExampleTests {
      */
     @Test
     public void shouldEncodeResponseHeadersWithHuffmanEncoding() {
+
+        hpack.setHuffmanEncoding(true);
 
         /**
          * C.6.1.  First Response

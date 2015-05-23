@@ -41,7 +41,7 @@ public class HuffmanEncoder {
 
     }
 
-    public byte[] decode(byte[] data) throws IOException {
+    public static byte[] decode(byte[] data) throws IOException {
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             byte hold = 0x00;
@@ -67,14 +67,14 @@ public class HuffmanEncoder {
         }
     }
 
-    public byte[] encode(byte[] bytes) throws IOException {
+    public static byte[] encode(byte[] bytes) throws IOException {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             encode(bytes, baos);
             return baos.toByteArray();
         }
     }
 
-    public void encode(byte[] bytes, OutputStream os) throws IOException {
+    public static void encode(byte[] bytes, OutputStream os) throws IOException {
         byte bitBuffer = 0x00;
         int holdOffset = 0;
 

@@ -116,17 +116,24 @@ public class Hpack {
         return decode(new ByteArrayInputStream(encoding), prefixBits);
     }
 
-    public byte[] encodeLiteralHeaderFieldWithIndexing(String name, String value) {
-        byte[] nameBytes = name.getBytes(Charset.defaultCharset());
-        byte[] valueBytes = value.getBytes(Charset.defaultCharset());
+    private byte[] huffmanEncodedLiteral(String literal) {
+        try {
+            return HuffmanEncoder.encode(literal.getBytes(Charset.defaultCharset()));
+        } catch (IOException e) {
+            throw new RuntimeException("Unhandled failure!", e);
+        }
+    }
 
+    public byte[] encodeLiteralHeaderFieldWithIndexing(String name, String value) {
+
+        byte[] nameBytes;
+        byte[] valueBytes;
         if (huffmanEncoding) {
-            try {
-                nameBytes = new HuffmanEncoder().encode(nameBytes);
-                valueBytes = new HuffmanEncoder().encode(valueBytes);
-            } catch (IOException e) {
-                throw new RuntimeException("Unhandled failure!", e);
-            }
+            nameBytes = huffmanEncodedLiteral(name);
+            valueBytes = huffmanEncodedLiteral(value);
+        } else {
+            nameBytes = name.getBytes(Charset.defaultCharset());
+            valueBytes = value.getBytes(Charset.defaultCharset());
         }
 
         // TODO: Ensure the header name length fits into 1 byte.
@@ -147,11 +154,7 @@ public class Hpack {
         byte[] valueBytes = value.getBytes(Charset.defaultCharset());
 
         if (huffmanEncoding) {
-            try {
-                valueBytes = new HuffmanEncoder().encode(valueBytes);
-            } catch (IOException e) {
-                throw new RuntimeException("Unhandled failure!", e);
-            }
+            valueBytes = huffmanEncodedLiteral(value);
         }
 
         return ByteBuffer
@@ -163,16 +166,15 @@ public class Hpack {
     }
 
     public byte[] encodeLiteralHeaderFieldNeverIndexed(String name, String value) {
-        byte[] nameBytes = name.getBytes(Charset.defaultCharset());
-        byte[] valueBytes = value.getBytes(Charset.defaultCharset());
 
+        byte[] nameBytes;
+        byte[] valueBytes;
         if (huffmanEncoding) {
-            try {
-                nameBytes = new HuffmanEncoder().encode(nameBytes);
-                valueBytes = new HuffmanEncoder().encode(valueBytes);
-            } catch (IOException e) {
-                throw new RuntimeException("Unhandled failure!", e);
-            }
+            nameBytes = huffmanEncodedLiteral(name);
+            valueBytes = huffmanEncodedLiteral(value);
+        } else {
+            nameBytes = name.getBytes(Charset.defaultCharset());
+            valueBytes = value.getBytes(Charset.defaultCharset());
         }
 
         return ByteBuffer
@@ -195,13 +197,11 @@ public class Hpack {
             return new byte[] { (byte) (128 | index) };
         } else if ((index = headerIndex.getIndex(name)) != null) {
             // Return the name index, and the value encoding.
-            byte[] valueBytes = value.getBytes(Charset.defaultCharset());
+            byte[] valueBytes;
             if (huffmanEncoding) {
-                try {
-                    valueBytes = new HuffmanEncoder().encode(valueBytes);
-                } catch (IOException e) {
-                    throw new RuntimeException("Unhandled failure!", e);
-                }
+                valueBytes = huffmanEncodedLiteral(value);
+            } else {
+                valueBytes = value.getBytes(Charset.defaultCharset());
             }
 
             headerIndex.store(name, value);
@@ -209,20 +209,19 @@ public class Hpack {
             return ByteBuffer
                     .allocate(2 + valueBytes.length)
                     .put((byte) (64 | index))
-                    .put((byte) (128 | valueBytes.length))
+                    .put((byte) ((huffmanEncoding ? 128 : 0) | valueBytes.length))
                     .put(valueBytes)
                     .array();
         } else {
             // Return the name encoding, and the value encoding.
-            byte[] nameBytes = name.getBytes(Charset.defaultCharset());
-            byte[] valueBytes = value.getBytes(Charset.defaultCharset());
+            byte[] nameBytes;
+            byte[] valueBytes;
             if (huffmanEncoding) {
-                try {
-                    nameBytes = new HuffmanEncoder().encode(nameBytes);
-                    valueBytes = new HuffmanEncoder().encode(valueBytes);
-                } catch (IOException e) {
-                    throw new RuntimeException("Unhandled failure!", e);
-                }
+                nameBytes = huffmanEncodedLiteral(name);
+                valueBytes = huffmanEncodedLiteral(value);
+            } else {
+                nameBytes = name.getBytes(Charset.defaultCharset());
+                valueBytes = value.getBytes(Charset.defaultCharset());
             }
 
             headerIndex.store(name, value);
@@ -230,9 +229,9 @@ public class Hpack {
             return ByteBuffer
                     .allocate(3 + nameBytes.length + valueBytes.length)
                     .put((byte) 64) // Literal indexed.
-                    .put((byte) (128 | nameBytes.length))
+                    .put((byte) ((huffmanEncoding ? 128 : 0) | nameBytes.length))
                     .put(nameBytes)
-                    .put((byte) (128 | valueBytes.length))
+                    .put((byte) ((huffmanEncoding ? 128 : 0) | valueBytes.length))
                     .put(valueBytes)
                     .array();
         }
